@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS += -Wall
+CFLAGS += -Wall -O2
 
 # inputs
 
@@ -56,7 +56,7 @@ install: $(SO)
 	sudo cp -r $(INC_DIR)/* $(INSTALL_DIR_INC)
 
 uninstall:
-	sudo rm $(INSTALL_DIR)/$(SO)
+	sudo rm $(INSTALL_DIR_LIB)/$(SO) # TODO fix this
 
 clean:
 	rm -rf $(LIB_DIR) $(EX_BINS)
