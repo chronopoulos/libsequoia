@@ -6,9 +6,9 @@
 
 #include "ziggurat/session.h"
 
-static void *_worker_metro(void *arg) {
+static void *_worker_session(void *arg) {
 
-    struct zig_session_data *sesh= (struct zig_session_data*) arg;
+    struct zig_session_data *sesh = (struct zig_session_data*) arg;
 
     struct timespec time;
     double lastTick = 0.;
@@ -23,8 +23,10 @@ static void *_worker_metro(void *arg) {
             if ((time.tv_sec + time.tv_nsec/1e9 - lastTick) >= sesh->period_sec) {
                 lastTick = time.tv_sec + time.tv_nsec/1e9;
                 for (i=0; i<(sesh->nseqs); i++) {
-                    // TODO replace this with condition variables set
-                    zig_sequence_tick(sesh->seqs[i]);
+                    pthread_mutex_lock(&sesh->seqs[i]->mtx_tickFlag);
+                    sesh->seqs[i]->tickFlag = true;
+                    pthread_mutex_unlock(&sesh->seqs[i]->mtx_tickFlag);
+                    pthread_cond_signal(&sesh->seqs[i]->cond_tickFlag);
                 }
             }
         } else {
@@ -95,7 +97,7 @@ void zig_session_init(struct zig_session_data *sesh, int type) {
 	}
 
     pthread_mutex_init(&sesh->mtx_go, NULL);
-    pthread_create(&sesh->thread_metro, NULL, _worker_metro, sesh);
+    pthread_create(&sesh->thread, NULL, _worker_session, sesh);
 
 }
 
@@ -126,7 +128,7 @@ void zig_session_add_sequence(struct zig_session_data *sesh, struct zig_sequence
 void zig_session_wait(struct zig_session_data *sesh) {
 
     void *retval;
-    pthread_join(sesh->thread_metro, &retval);
+    pthread_join(sesh->thread, &retval);
 
 }
 

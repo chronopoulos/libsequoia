@@ -23,7 +23,7 @@ struct zig_session_data {
     jack_ringbuffer_t *rbo;
 
     pthread_mutex_t  mtx_go;
-    pthread_t thread_metro;
+    pthread_t thread;
 
     struct zig_sequence_data *seqs[ZIGGURAT_MAX_NSEQ];
     int nseqs;

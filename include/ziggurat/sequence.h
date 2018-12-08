@@ -1,6 +1,7 @@
 #ifndef SEQUENCE_H
 #define SEQUENCE_H
 
+#include <pthread.h>
 #include <jack/ringbuffer.h>
 
 struct zig_sequence_data {
@@ -12,6 +13,13 @@ struct zig_sequence_data {
 
     jack_ringbuffer_t *rbi;
     jack_ringbuffer_t *rbo;
+
+    
+    pthread_t thread;
+
+    bool tickFlag;
+    pthread_mutex_t  mtx_tickFlag;
+    pthread_cond_t cond_tickFlag;
 
 };
 

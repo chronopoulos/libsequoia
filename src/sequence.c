@@ -1,7 +1,27 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "ziggurat.h"
+
+static void *_worker_sequence(void *arg) {
+
+    struct zig_sequence_data *seq = (struct zig_sequence_data*) arg;
+
+    while(1) {
+
+        while(!seq->tickFlag) {
+            pthread_cond_wait(&seq->cond_tickFlag, &seq->mtx_tickFlag); // unlock, wait.. lock
+        }
+        seq->tickFlag = false;
+        pthread_mutex_unlock(&seq->mtx_tickFlag);
+        zig_sequence_tick(seq);
+
+    }
+
+    return NULL;
+
+}
 
 void zig_sequence_init(struct zig_sequence_data *seq, int length) {
 
@@ -13,6 +33,12 @@ void zig_sequence_init(struct zig_sequence_data *seq, int length) {
     }
 
     seq->playhead = 0;
+
+    seq->tickFlag = false;
+    pthread_mutex_init(&seq->mtx_tickFlag, NULL);
+    pthread_cond_init(&seq->cond_tickFlag, NULL);
+
+    pthread_create(&seq->thread, NULL, _worker_sequence, seq);
 
 }
 
