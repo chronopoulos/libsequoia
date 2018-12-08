@@ -29,7 +29,7 @@ EX_BINS := $(patsubst $(EXAMPLE_DIR)/%.c,$(EXAMPLE_DIR)/%,$(EX_SRCS))
 
 ##########################
 
-all: library examples # careful with "make -j$(nproc)" here
+default: library
 
 library: $(SO)
 
