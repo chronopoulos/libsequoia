@@ -6,27 +6,20 @@
 
 struct zig_sequence_data {
 
-    int *trigs;
-    int length;
+    int nsteps;
+    int tps;
+    jack_nframes_t fpt;
 
-    int playhead;
+    int nticks;
+    int *ticks;
 
-    jack_ringbuffer_t *rbi;
-    jack_ringbuffer_t *rbo;
-
-    
-    pthread_t thread;
-
-    bool tickFlag;
-    pthread_mutex_t  mtx_tickFlag;
-    pthread_cond_t cond_tickFlag;
+    int tick;
+    jack_nframes_t frame;
 
 };
 
-void zig_sequence_init(struct zig_sequence_data*, int);
-void zig_sequence_set_rbi(struct zig_sequence_data*, jack_ringbuffer_t*);
-void zig_sequence_set_rbo(struct zig_sequence_data*, jack_ringbuffer_t*);
-void zig_sequence_set_trig(struct zig_sequence_data*, int, int);
-void zig_sequence_tick(struct zig_sequence_data*);
+void zig_sequence_init(struct zig_sequence_data*, int, int, int);
+void zig_sequence_set_step(struct zig_sequence_data*, int, int);
+void zig_sequence_process(struct zig_sequence_data*, jack_nframes_t, void*);
 
 #endif
