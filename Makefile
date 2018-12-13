@@ -5,7 +5,6 @@ CFLAGS += -Wall -O2
 
 SRC_DIR = src
 INC_DIR = include
-EXAMPLE_DIR = examples
 
 SOURCES := $(wildcard $(SRC_DIR)/*.c)
 
@@ -18,11 +17,6 @@ OBJS :=  $(patsubst $(SRC_DIR)/%.c,$(LIB_DIR)/%.o,$(SOURCES))
 INSTALL_DIR_LIB = /usr/local/lib
 INSTALL_DIR_INC = /usr/local/include
 
-# examples
-
-EX_SRCS := $(wildcard $(EXAMPLE_DIR)/*.c)
-EX_BINS := $(patsubst $(EXAMPLE_DIR)/%.c,$(EXAMPLE_DIR)/%,$(EX_SRCS))
-
 ##########################
 
 .PHONY: all library examples clean install uninstall
@@ -33,8 +27,6 @@ default: library
 
 library: $(SO)
 
-examples: $(EX_BINS)
-
 ##########################
 
 $(SO): $(LIB_DIR) $(OBJS)
@@ -42,9 +34,6 @@ $(SO): $(LIB_DIR) $(OBJS)
 
 $(LIB_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -c -fPIC -I$(INC_DIR) -o$@ $?
-
-$(EXAMPLE_DIR)/%: $(EXAMPLE_DIR)/%.c
-	$(CC) $(CFLAGS) -I$(INC_DIR) -o$@ $^ -L$(LIB_DIR) -lziggurat -ljack
 
 $(LIB_DIR):
 	mkdir -p $(LIB_DIR)
@@ -59,4 +48,4 @@ uninstall:
 	sudo rm $(INSTALL_DIR_LIB)/$(SO) # TODO fix this
 
 clean:
-	rm -rf $(LIB_DIR) $(EX_BINS)
+	rm -rf $(LIB_DIR)
