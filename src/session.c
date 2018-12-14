@@ -27,7 +27,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 }
 
-void zig_session_init(struct zig_session_data *sesh, int bpm, int tps) {
+void zig_session_init(struct zig_session_data *sesh, char *client_name, int bpm, int tps) {
 
     // initialize struct members
     sesh->go = false;
@@ -36,7 +36,7 @@ void zig_session_init(struct zig_session_data *sesh, int bpm, int tps) {
     sesh->nseqs = 0;
 
     // open jack client
-    sesh->jack_client = jack_client_open("ziggurat_client", JackNullOption, NULL);
+    sesh->jack_client = jack_client_open(client_name, JackNullOption, NULL);
 	if (sesh->jack_client == 0) {
         fprintf (stderr, "JACK server not running?\n");
 	}

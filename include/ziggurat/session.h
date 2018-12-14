@@ -29,7 +29,7 @@ struct zig_session_data {
 
 };
 
-void zig_session_init(struct zig_session_data*, int, int);
+void zig_session_init(struct zig_session_data*, char*, int, int);
 void zig_session_start(struct zig_session_data*);
 void zig_session_stop(struct zig_session_data*);
 void zig_session_add_sequence(struct zig_session_data*, struct zig_sequence_data*);
