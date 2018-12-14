@@ -37,6 +37,12 @@ void zig_sequence_set_step(struct zig_sequence_data *seq, int stepIndex, int not
 
 }
 
+void zig_sequence_set_raw_tick(struct zig_sequence_data *seq, int tickIndex, int note) {
+
+    seq->ticks[tickIndex] = note;
+
+}
+
 void zig_sequence_process(struct zig_sequence_data *seq, jack_nframes_t nframes,
                             void *port_buf) {
 

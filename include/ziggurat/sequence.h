@@ -20,6 +20,7 @@ struct zig_sequence_data {
 
 void zig_sequence_init(struct zig_sequence_data*, int, int, int);
 void zig_sequence_set_step(struct zig_sequence_data*, int, int);
+void zig_sequence_set_raw_tick(struct zig_sequence_data*, int, int);
 void zig_sequence_process(struct zig_sequence_data*, jack_nframes_t, void*);
 
 #endif
