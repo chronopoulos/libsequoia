@@ -3,5 +3,6 @@
 
 #include "ziggurat/session.h"
 #include "ziggurat/sequence.h"
+#include "ziggurat/trigger.h"
 
 #endif
