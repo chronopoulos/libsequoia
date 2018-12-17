@@ -14,7 +14,9 @@ struct zig_sequence_data {
     int nsteps;
     int tps;
     jack_nframes_t fpt;
+
     char name[MAX_NAME_LENGTH + 1];
+    int transpose;
 
     struct zig_trigger_data *trigs;
 

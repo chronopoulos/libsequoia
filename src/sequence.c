@@ -28,6 +28,7 @@ void _get_tick_indices_note(struct zig_sequence_data *seq, int step_index, struc
 
     *tick_index_on = index_on;
     *tick_index_off = index_off;
+
 }
 
 // </helper>
@@ -37,6 +38,9 @@ void zig_sequence_init(struct zig_sequence_data *seq, int nsteps, int tps, int f
     seq->nsteps = nsteps;
     seq->tps = tps;
     seq->fpt = fpt;
+
+    seq->name[0] = '\0';
+    seq->transpose = 0;
 
     seq->trigs = malloc(seq->nsteps * sizeof(struct zig_trigger_data));
     for (int i=0; i<seq->nsteps; i++) {
@@ -114,13 +118,14 @@ void zig_sequence_process(struct zig_sequence_data *seq, jack_nframes_t nframes,
 
     while(nframes_left) {
 
-        // if we're on a tick boundary, output the event
+        // if we're on a tick boundary, and the packet is non-empty.. output the event
         if (seq->frame == 0) {
 
             if (seq->ticks[seq->tick][0]) { // if status byte != 0
 
                 midi_msg_write_ptr = jack_midi_event_reserve(port_buf, nframes - nframes_left, 3);
                 memcpy(midi_msg_write_ptr, seq->ticks[seq->tick], 3);
+                midi_msg_write_ptr[1] += seq->transpose;
 
             }
 
