@@ -19,7 +19,8 @@ struct zig_trigger_data {
 };
 
 void zig_trigger_init(struct zig_trigger_data*);
-void zig_trigger_set_microtime(struct zig_trigger_data*, float);
+void zig_trigger_set_null(struct zig_trigger_data*);
 void zig_trigger_set_note(struct zig_trigger_data*, int, int, float);
+void zig_trigger_set_cc(struct zig_trigger_data*, int, int);
 
 #endif
