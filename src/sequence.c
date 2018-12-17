@@ -5,11 +5,32 @@
 
 #include "ziggurat.h"
 
+// <helper>
+
 inline jack_nframes_t _min_nframes(jack_nframes_t a, jack_nframes_t b ) {
 
     return a < b ? a : b;
 
 }
+
+void _get_tick_indices_note(struct zig_sequence_data *seq, int step_index, struct zig_trigger_data *trig,
+                                int *tick_index_on, int *tick_index_off) {
+
+    int index_on, index_off;
+
+    index_on = (step_index + trig->microtime) * seq->tps;
+    if (index_on < 0) index_on = 0;
+    if (index_on >= seq->nticks) index_on = seq->nticks - 1;
+
+    index_off = index_on + trig->length*seq->tps;
+    if (index_off < 0) index_off = 0;
+    if (index_off >= seq->nticks) index_off = seq->nticks - 1;
+
+    *tick_index_on = index_on;
+    *tick_index_off = index_off;
+}
+
+// </helper>
 
 void zig_sequence_init(struct zig_sequence_data *seq, int nsteps, int tps, int fpt) {
 
@@ -36,37 +57,33 @@ void zig_sequence_init(struct zig_sequence_data *seq, int nsteps, int tps, int f
 
 }
 
-void zig_sequence_set_trig(struct zig_sequence_data *seq, int stepIndex, struct zig_trigger_data *trig) {
+void zig_sequence_set_trig(struct zig_sequence_data *seq, int step_index, struct zig_trigger_data *trig) {
 
-    memcpy(seq->trigs + stepIndex, trig, sizeof(struct zig_trigger_data));
+    memcpy(seq->trigs + step_index, trig, sizeof(struct zig_trigger_data));
 
-    int tickIndex_on, tickIndex_off;
+    int tick_index_on, tick_index_off;
     midi_packet pkt_on, pkt_off;
     if (trig->type == TRIG_NOTE) {
+
+        _get_tick_indices_note(seq, step_index, trig, &tick_index_on, &tick_index_off);
 
         pkt_on[0] = 143 + trig->channel; // note on
         pkt_on[1] = trig->note;
         pkt_on[2] = trig->velocity;
-        tickIndex_on = (stepIndex + trig->microtime)*seq->tps;
-        if (tickIndex_on < 0) tickIndex_on = 0;
-        if (tickIndex_on >= seq->nticks) tickIndex_on = seq->nticks - 1;
-        zig_sequence_set_raw_tick(seq, tickIndex_on, &pkt_on);
+        zig_sequence_set_raw_tick(seq, tick_index_on, &pkt_on);
 
         pkt_off[0] = 127 + trig->channel; // note off
         pkt_off[1] = trig->note;
         pkt_off[2] = trig->velocity; // what should we put here?
-        tickIndex_off = tickIndex_on + trig->length*seq->tps;
-        if (tickIndex_off < 0) tickIndex_off = 0;
-        if (tickIndex_off >= seq->nticks) tickIndex_off = seq->nticks - 1;
-        zig_sequence_set_raw_tick(seq, tickIndex_off, &pkt_off);
+        zig_sequence_set_raw_tick(seq, tick_index_off, &pkt_off);
 
     }
 
 }
 
-void zig_sequence_set_raw_tick(struct zig_sequence_data *seq, int tickIndex, midi_packet *pkt) {
+void zig_sequence_set_raw_tick(struct zig_sequence_data *seq, int tick_index, midi_packet *pkt) {
 
-    memcpy(seq->ticks + tickIndex, pkt, sizeof(midi_packet));
+    memcpy(seq->ticks + tick_index, pkt, sizeof(midi_packet));
 
 }
 
