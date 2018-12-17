@@ -24,8 +24,9 @@ struct zig_sequence_data {
 };
 
 void zig_sequence_init(struct zig_sequence_data*, int, int, int);
-void zig_sequence_set_trig(struct zig_sequence_data*, int, struct zig_trigger_data*);
 void zig_sequence_set_raw_tick(struct zig_sequence_data*, int, midi_packet*);
+void zig_sequence_set_trig(struct zig_sequence_data*, int, struct zig_trigger_data*);
+void zig_sequence_clear_trig(struct zig_sequence_data*, int);
 void zig_sequence_process(struct zig_sequence_data*, jack_nframes_t, void*);
 
 #endif

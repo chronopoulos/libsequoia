@@ -57,6 +57,13 @@ void zig_sequence_init(struct zig_sequence_data *seq, int nsteps, int tps, int f
 
 }
 
+
+void zig_sequence_set_raw_tick(struct zig_sequence_data *seq, int tick_index, midi_packet *pkt) {
+
+    memcpy(seq->ticks + tick_index, pkt, sizeof(midi_packet));
+
+}
+
 void zig_sequence_set_trig(struct zig_sequence_data *seq, int step_index, struct zig_trigger_data *trig) {
 
     memcpy(seq->trigs + step_index, trig, sizeof(struct zig_trigger_data));
@@ -81,9 +88,14 @@ void zig_sequence_set_trig(struct zig_sequence_data *seq, int step_index, struct
 
 }
 
-void zig_sequence_set_raw_tick(struct zig_sequence_data *seq, int tick_index, midi_packet *pkt) {
+void zig_sequence_clear_trig(struct zig_sequence_data *seq, int step_index) {
 
-    memcpy(seq->ticks + tick_index, pkt, sizeof(midi_packet));
+    int tick_index_on, tick_index_off;
+    midi_packet empty_packet = {0, 0, 0};
+    _get_tick_indices_note(seq, step_index, seq->trigs + step_index, &tick_index_on, &tick_index_off);
+
+    zig_sequence_set_raw_tick(seq, tick_index_on, &empty_packet);
+    zig_sequence_set_raw_tick(seq, tick_index_off, &empty_packet);
 
 }
 
