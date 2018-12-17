@@ -57,6 +57,11 @@ void zig_sequence_init(struct zig_sequence_data *seq, int nsteps, int tps, int f
 
 }
 
+void zig_sequence_set_name(struct zig_sequence_data *seq, const char *name) {
+
+    strcpy(seq->name, name);
+
+}
 
 void zig_sequence_set_raw_tick(struct zig_sequence_data *seq, int tick_index, midi_packet *pkt) {
 
