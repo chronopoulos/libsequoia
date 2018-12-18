@@ -9,7 +9,7 @@
 
 typedef jack_midi_data_t midi_packet[3]; // equivalent to 3 unsigned chars
 
-enum _sequence_param {SEQUENCE_TRANSPOSE};
+enum _sequence_param {SEQUENCE_TRANSPOSE, SEQUENCE_TICK};
 
 struct _sequence_ctrl_msg {
 
@@ -47,5 +47,6 @@ void gs_sequence_set_trig(struct gs_sequence_data*, int, struct gs_trigger_data*
 void gs_sequence_clear_trig(struct gs_sequence_data*, int);
 void gs_sequence_tick(struct gs_sequence_data*, void*, jack_nframes_t);
 void gs_sequence_set_transpose(struct gs_sequence_data*, int);
+void gs_sequence_set_tick(struct gs_sequence_data*, int);
 
 #endif

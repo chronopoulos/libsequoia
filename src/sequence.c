@@ -47,6 +47,8 @@ void _sequence_serve_ctrl_msgs(struct gs_sequence_data *seq) {
 
         if (msg.param == SEQUENCE_TRANSPOSE) {
             seq->transpose = msg.vi;
+        } else if (msg.param == SEQUENCE_TICK) {
+            seq->tick = msg.vi;
         }
 
         avail -= sizeof(struct _sequence_ctrl_msg);
@@ -168,3 +170,19 @@ void gs_sequence_set_transpose(struct gs_sequence_data *seq, int transpose) {
     _sequence_ringbuffer_write(seq, &msg);
 
 }
+
+void gs_sequence_set_tick(struct gs_sequence_data *seq, int tick) {
+
+    if ( (tick < 0) || (tick >= seq->nticks) ) {
+        fprintf(stderr, "tick value out of range: %d\n", tick);
+        return;
+    }
+
+    struct _sequence_ctrl_msg msg;
+    msg.param = SEQUENCE_TICK;
+    msg.vi = tick;
+
+    _sequence_ringbuffer_write(seq, &msg);
+
+}
+
