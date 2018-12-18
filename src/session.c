@@ -213,6 +213,11 @@ void gs_session_set_bpm(struct gs_session_data *sesh, float bpm) {
 
 void gs_session_add_sequence(struct gs_session_data *sesh, struct gs_sequence_data *seq) {
 
+    if (seq->tps != sesh->tps) {
+        fprintf(stderr, "seq->tps doesn't match sesh->tps: %d vs %d\n", seq->tps, sesh->tps);
+        return;
+    }
+
     struct _session_ctrl_msg msg;
     msg.param = SESSION_ADD_SEQ;
     msg.vp = seq;
