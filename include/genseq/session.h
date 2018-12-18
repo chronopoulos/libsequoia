@@ -15,7 +15,7 @@
 #define STEPS_PER_BEAT 4
 #define SECONDS_PER_MINUTE 60
 
-enum _session_param {SESSION_GO, SESSION_BPM};
+enum _session_param {SESSION_GO, SESSION_BPM, SESSION_ADD_SEQ, SESSION_RM_SEQ};
 
 struct _session_ctrl_msg {
 
@@ -25,23 +25,26 @@ struct _session_ctrl_msg {
     int vi;
     float vf;
     bool vb;
+    struct gs_sequence_data *vp;
 
 };
 
 struct gs_session_data {
 
+    // these things are accessible from the UI thread
     float bpm; // beats per minute
+    bool go;
+    struct gs_sequence_data *seqs[MAX_NSEQ];
+    int nseqs;
+
     int tps; // ticks per step
     int fpt; // frames per tick
-    bool go;
 
     jack_client_t *jack_client;
     jack_port_t *jack_port_out;
     jack_nframes_t sr; // sample rate
     jack_nframes_t bs; // buffer size
 
-    struct gs_sequence_data *seqs[MAX_NSEQ];
-    int nseqs;
 
     jack_ringbuffer_t *rb;
 
@@ -54,6 +57,7 @@ void gs_session_start(struct gs_session_data*);
 void gs_session_stop(struct gs_session_data*);
 void gs_session_set_bpm(struct gs_session_data*, float);
 void gs_session_add_sequence(struct gs_session_data*, struct gs_sequence_data*);
+void gs_session_rm_sequence(struct gs_session_data*, struct gs_sequence_data*);
 void gs_session_wait(struct gs_session_data*);
 
 #endif

@@ -43,11 +43,7 @@ void _session_handle_bpm_change(struct gs_session_data *sesh) {
 
 }
 
-// </helper>
-
-static int _process(jack_nframes_t nframes, void *arg) {
-
-    struct gs_session_data *sesh = (struct gs_session_data*) arg;
+void _session_serve_ctrl_msgs(struct gs_session_data *sesh) {
 
     int avail = jack_ringbuffer_read_space(sesh->rb);
     struct _session_ctrl_msg msg;
@@ -56,15 +52,51 @@ static int _process(jack_nframes_t nframes, void *arg) {
         jack_ringbuffer_read(sesh->rb, (char*) &msg, sizeof(struct _session_ctrl_msg));
 
         if (msg.param == SESSION_GO) {
+
             sesh->go = msg.vb;
+
         } else if (msg.param == SESSION_BPM) {
+
             sesh->bpm = msg.vf;
             _session_handle_bpm_change(sesh);
+
+        } else if (msg.param == SESSION_ADD_SEQ) {
+
+            sesh->seqs[sesh->nseqs] = msg.vp;
+            sesh->nseqs++;
+
+        } else if (msg.param == SESSION_RM_SEQ) {
+
+            int i;
+
+            for (i=0; i<sesh->nseqs; i++) {
+                if (sesh->seqs[i] == msg.vp) {
+                    break;
+                }
+            }
+
+            if (i < sesh->nseqs) { // then we found it at i
+                sesh->nseqs--; // decrement nseqs
+                for (; i<sesh->nseqs; i++) {
+                    sesh->seqs[i] = sesh->seqs[i+1]; // left-shift the tail of the vector
+                }
+            } // else do nothing
+
         }
 
         avail -= sizeof(struct _session_ctrl_msg);
 
     }
+
+}
+
+// </helper>
+
+static int _process(jack_nframes_t nframes, void *arg) {
+
+    struct gs_session_data *sesh = (struct gs_session_data*) arg;
+
+    _session_serve_ctrl_msgs(sesh);
 
     void *output_port_buf; // cannot be cached! see jack.h
     output_port_buf = jack_port_get_buffer(sesh->jack_port_out, nframes);
@@ -181,8 +213,24 @@ void gs_session_set_bpm(struct gs_session_data *sesh, float bpm) {
 
 void gs_session_add_sequence(struct gs_session_data *sesh, struct gs_sequence_data *seq) {
 
-    sesh->seqs[sesh->nseqs] = seq;
-    sesh->nseqs++;
+    struct _session_ctrl_msg msg;
+    msg.param = SESSION_ADD_SEQ;
+    msg.vp = seq;
+
+    _session_ringbuffer_write(sesh, &msg);
+
+}
+
+void gs_session_rm_sequence(struct gs_session_data *sesh, struct gs_sequence_data *seq) {
+
+    // NOTE: this does not free the memory pointed to by seq;
+    //  the caller must do that explicitly
+
+    struct _session_ctrl_msg msg;
+    msg.param = SESSION_RM_SEQ;
+    msg.vp = seq;
+
+    _session_ringbuffer_write(sesh, &msg);
 
 }
 
