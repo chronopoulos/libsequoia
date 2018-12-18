@@ -25,6 +25,36 @@ void _get_tick_indices_note(struct gs_sequence_data *seq, int step_index, struct
 
 }
 
+void _sequence_ringbuffer_write(struct gs_sequence_data *seq, struct _sequence_ctrl_msg *msg) {
+
+    int avail = jack_ringbuffer_write_space(seq->rb);
+    if (avail < sizeof(struct _sequence_ctrl_msg)) {
+        fprintf(stderr, "sequence ringbuffer: overflow\n");
+        return;
+    }
+
+    jack_ringbuffer_write(seq->rb, (const char*) msg, sizeof(struct _sequence_ctrl_msg));
+
+}
+
+void _sequence_serve_ctrl_msgs(struct gs_sequence_data *seq) {
+
+    int avail = jack_ringbuffer_read_space(seq->rb);
+    struct _sequence_ctrl_msg msg;
+    while(avail >= sizeof(struct _sequence_ctrl_msg)) {
+
+        jack_ringbuffer_read(seq->rb, (char*) &msg, sizeof(struct _sequence_ctrl_msg));
+
+        if (msg.param == SEQUENCE_TRANSPOSE) {
+            seq->transpose = msg.vi;
+        }
+
+        avail -= sizeof(struct _sequence_ctrl_msg);
+
+    }
+
+}
+
 // </helper>
 
 void gs_sequence_init(struct gs_sequence_data *seq, int nsteps, int tps) {
@@ -39,8 +69,6 @@ void gs_sequence_init(struct gs_sequence_data *seq, int nsteps, int tps) {
         gs_trigger_init(seq->trigs + i);
     }
 
-
-    // TODO move this to "render" method called by session_add_sequence()
     seq->nticks = seq->nsteps * seq->tps;
     seq->ticks = malloc(seq->nticks * sizeof(midi_packet));
     for(int i=0; i<seq->nticks; i++) {
@@ -48,6 +76,15 @@ void gs_sequence_init(struct gs_sequence_data *seq, int nsteps, int tps) {
     }
 
     seq->tick = 0;
+
+    // allocate and lock ringbuffer (universal ringbuffer length?)
+    seq->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(struct _sequence_ctrl_msg));
+    int err = jack_ringbuffer_mlock(seq->rb);
+    if (err) {
+        fprintf(stderr, "failed to lock ringbuffer\n");
+        exit(1);
+    }
+
 
 }
 
@@ -100,6 +137,8 @@ void gs_sequence_clear_trig(struct gs_sequence_data *seq, int step_index) {
 
 void gs_sequence_tick(struct gs_sequence_data *seq, void *port_buf, jack_nframes_t idx) {
 
+    _sequence_serve_ctrl_msgs(seq);
+
     unsigned char *midi_msg_write_ptr;
 
     // if the packet is non-empty, output the event
@@ -120,3 +159,12 @@ void gs_sequence_tick(struct gs_sequence_data *seq, void *port_buf, jack_nframes
 
 }
 
+void gs_sequence_set_transpose(struct gs_sequence_data *seq, int transpose) {
+
+    struct _sequence_ctrl_msg msg;
+    msg.param = SEQUENCE_TRANSPOSE;
+    msg.vi = transpose;
+
+    _sequence_ringbuffer_write(seq, &msg);
+
+}
