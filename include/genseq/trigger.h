@@ -3,7 +3,7 @@
 
 enum trig_type {TRIG_NULL, TRIG_NOTE, TRIG_CC};
 
-struct zig_trigger_data {
+struct gs_trigger_data {
 
     enum trig_type type;
     int channel;            // [1, 16]
@@ -18,9 +18,9 @@ struct zig_trigger_data {
 
 };
 
-void zig_trigger_init(struct zig_trigger_data*);
-void zig_trigger_set_null(struct zig_trigger_data*);
-void zig_trigger_set_note(struct zig_trigger_data*, int, int, float);
-void zig_trigger_set_cc(struct zig_trigger_data*, int, int);
+void gs_trigger_init(struct gs_trigger_data*);
+void gs_trigger_set_null(struct gs_trigger_data*);
+void gs_trigger_set_note(struct gs_trigger_data*, int, int, float);
+void gs_trigger_set_cc(struct gs_trigger_data*, int, int);
 
 #endif

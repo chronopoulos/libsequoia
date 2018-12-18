@@ -3,14 +3,14 @@
 #include <math.h>
 #include <jack/midiport.h>
 
-#include "ziggurat/session.h"
+#include "genseq.h"
 
 static int _process(jack_nframes_t nframes, void *arg) {
 
-    struct zig_session_data *sesh;
+    struct gs_session_data *sesh;
     void *output_port_buf; // cannot be cached! see jack.h
 
-    sesh = (struct zig_session_data*) arg;
+    sesh = (struct gs_session_data*) arg;
 
     if (sesh->go) {
 
@@ -18,7 +18,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
         jack_midi_clear_buffer(output_port_buf);
 
         for (int i=0; i<sesh->nseqs; i++) {
-            zig_sequence_process(sesh->seqs[i], nframes, output_port_buf);
+            gs_sequence_process(sesh->seqs[i], nframes, output_port_buf);
         }
 
     }
@@ -27,7 +27,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 }
 
-void zig_session_init(struct zig_session_data *sesh, char *client_name, int bpm, int tps) {
+void gs_session_init(struct gs_session_data *sesh, char *client_name, int bpm, int tps) {
 
     // initialize struct members
     sesh->go = false;
@@ -67,26 +67,26 @@ void zig_session_init(struct zig_session_data *sesh, char *client_name, int bpm,
 
 }
 
-void zig_session_start(struct zig_session_data *sesh) {
+void gs_session_start(struct gs_session_data *sesh) {
 
     sesh->go = true;
 
 }
 
-void zig_session_stop(struct zig_session_data *sesh) {
+void gs_session_stop(struct gs_session_data *sesh) {
 
     sesh->go = false;
 
 }
 
-void zig_session_add_sequence(struct zig_session_data *sesh, struct zig_sequence_data *seq) {
+void gs_session_add_sequence(struct gs_session_data *sesh, struct gs_sequence_data *seq) {
 
     sesh->seqs[sesh->nseqs] = seq;
     sesh->nseqs++;
 
 }
 
-void zig_session_wait(struct zig_session_data *sesh) {
+void gs_session_wait(struct gs_session_data *sesh) {
 
     while(1) {
         usleep(1000);

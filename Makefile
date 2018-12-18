@@ -11,7 +11,7 @@ SOURCES := $(wildcard $(SRC_DIR)/*.c)
 # outputs
 
 LIB_DIR = lib
-SO = $(LIB_DIR)/libziggurat.so
+SO = $(LIB_DIR)/libgenseq.so
 OBJS :=  $(patsubst $(SRC_DIR)/%.c,$(LIB_DIR)/%.o,$(SOURCES))
 
 INSTALL_DIR_LIB = /usr/local/lib

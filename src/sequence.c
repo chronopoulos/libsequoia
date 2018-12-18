@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "ziggurat.h"
+#include "genseq.h"
 
 // <helper>
 
@@ -13,7 +13,7 @@ inline jack_nframes_t _min_nframes(jack_nframes_t a, jack_nframes_t b ) {
 
 }
 
-void _get_tick_indices_note(struct zig_sequence_data *seq, int step_index, struct zig_trigger_data *trig,
+void _get_tick_indices_note(struct gs_sequence_data *seq, int step_index, struct gs_trigger_data *trig,
                                 int *tick_index_on, int *tick_index_off) {
 
     int index_on, index_off;
@@ -33,7 +33,7 @@ void _get_tick_indices_note(struct zig_sequence_data *seq, int step_index, struc
 
 // </helper>
 
-void zig_sequence_init(struct zig_sequence_data *seq, int nsteps, int tps, int fpt) {
+void gs_sequence_init(struct gs_sequence_data *seq, int nsteps, int tps, int fpt) {
 
     seq->nsteps = nsteps;
     seq->tps = tps;
@@ -42,9 +42,9 @@ void zig_sequence_init(struct zig_sequence_data *seq, int nsteps, int tps, int f
     seq->name[0] = '\0';
     seq->transpose = 0;
 
-    seq->trigs = malloc(seq->nsteps * sizeof(struct zig_trigger_data));
+    seq->trigs = malloc(seq->nsteps * sizeof(struct gs_trigger_data));
     for (int i=0; i<seq->nsteps; i++) {
-        zig_trigger_init(seq->trigs + i);
+        gs_trigger_init(seq->trigs + i);
     }
 
     seq->nticks = seq->nsteps * seq->tps;
@@ -61,21 +61,21 @@ void zig_sequence_init(struct zig_sequence_data *seq, int nsteps, int tps, int f
 
 }
 
-void zig_sequence_set_name(struct zig_sequence_data *seq, const char *name) {
+void gs_sequence_set_name(struct gs_sequence_data *seq, const char *name) {
 
     strcpy(seq->name, name);
 
 }
 
-void zig_sequence_set_raw_tick(struct zig_sequence_data *seq, int tick_index, midi_packet *pkt) {
+void gs_sequence_set_raw_tick(struct gs_sequence_data *seq, int tick_index, midi_packet *pkt) {
 
     memcpy(seq->ticks + tick_index, pkt, sizeof(midi_packet));
 
 }
 
-void zig_sequence_set_trig(struct zig_sequence_data *seq, int step_index, struct zig_trigger_data *trig) {
+void gs_sequence_set_trig(struct gs_sequence_data *seq, int step_index, struct gs_trigger_data *trig) {
 
-    memcpy(seq->trigs + step_index, trig, sizeof(struct zig_trigger_data));
+    memcpy(seq->trigs + step_index, trig, sizeof(struct gs_trigger_data));
 
     int tick_index_on, tick_index_off;
     midi_packet pkt_on, pkt_off;
@@ -86,29 +86,29 @@ void zig_sequence_set_trig(struct zig_sequence_data *seq, int step_index, struct
         pkt_on[0] = 143 + trig->channel; // note on
         pkt_on[1] = trig->note;
         pkt_on[2] = trig->velocity;
-        zig_sequence_set_raw_tick(seq, tick_index_on, &pkt_on);
+        gs_sequence_set_raw_tick(seq, tick_index_on, &pkt_on);
 
         pkt_off[0] = 127 + trig->channel; // note off
         pkt_off[1] = trig->note;
         pkt_off[2] = trig->velocity; // what should we put here?
-        zig_sequence_set_raw_tick(seq, tick_index_off, &pkt_off);
+        gs_sequence_set_raw_tick(seq, tick_index_off, &pkt_off);
 
     }
 
 }
 
-void zig_sequence_clear_trig(struct zig_sequence_data *seq, int step_index) {
+void gs_sequence_clear_trig(struct gs_sequence_data *seq, int step_index) {
 
     int tick_index_on, tick_index_off;
     midi_packet empty_packet = {0, 0, 0};
     _get_tick_indices_note(seq, step_index, seq->trigs + step_index, &tick_index_on, &tick_index_off);
 
-    zig_sequence_set_raw_tick(seq, tick_index_on, &empty_packet);
-    zig_sequence_set_raw_tick(seq, tick_index_off, &empty_packet);
+    gs_sequence_set_raw_tick(seq, tick_index_on, &empty_packet);
+    gs_sequence_set_raw_tick(seq, tick_index_off, &empty_packet);
 
 }
 
-void zig_sequence_process(struct zig_sequence_data *seq, jack_nframes_t nframes,
+void gs_sequence_process(struct gs_sequence_data *seq, jack_nframes_t nframes,
                             void *port_buf) {
 
     unsigned char *midi_msg_write_ptr;

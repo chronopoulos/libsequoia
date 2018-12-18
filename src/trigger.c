@@ -1,6 +1,6 @@
-#include "ziggurat.h"
+#include "genseq.h"
 
-void zig_trigger_init(struct zig_trigger_data *trig) {
+void gs_trigger_init(struct gs_trigger_data *trig) {
 
     trig->type = TRIG_NULL;
     trig->channel = 1;
@@ -15,12 +15,12 @@ void zig_trigger_init(struct zig_trigger_data *trig) {
 
 }
 
-void zig_trigger_set_null(struct zig_trigger_data *trig) {
+void gs_trigger_set_null(struct gs_trigger_data *trig) {
 
     trig->type = TRIG_NULL;
 
 }
-void zig_trigger_set_note(struct zig_trigger_data *trig, int note, int velocity, float length) {
+void gs_trigger_set_note(struct gs_trigger_data *trig, int note, int velocity, float length) {
 
     trig->type = TRIG_NOTE;
     trig->note = note;
@@ -29,7 +29,7 @@ void zig_trigger_set_note(struct zig_trigger_data *trig, int note, int velocity,
 
 }
 
-void zig_trigger_set_cc(struct zig_trigger_data *trig, int cc_number, int cc_value) {
+void gs_trigger_set_cc(struct gs_trigger_data *trig, int cc_number, int cc_value) {
 
     trig->type = TRIG_CC;
     trig->cc_number = cc_number;
