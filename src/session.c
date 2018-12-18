@@ -7,11 +7,23 @@
 
 static int _process(jack_nframes_t nframes, void *arg) {
 
-    struct gs_session_data *sesh;
+    struct gs_session_data *sesh = (struct gs_session_data*) arg;
+
+    int avail = jack_ringbuffer_read_space(sesh->rb);
+    struct _session_ctrl_msg msg;
+    while(avail >= sizeof(struct _session_ctrl_msg)) {
+
+        jack_ringbuffer_read(sesh->rb, (char*) &msg, sizeof(struct _session_ctrl_msg));
+
+        if (msg.param == SESSION_GO) {
+            sesh->go = msg.vb;
+        }
+
+        avail -= sizeof(struct _session_ctrl_msg);
+
+    }
+
     void *output_port_buf; // cannot be cached! see jack.h
-
-    sesh = (struct gs_session_data*) arg;
-
     if (sesh->go) {
 
         output_port_buf = jack_port_get_buffer(sesh->jack_port_out, nframes);
@@ -38,7 +50,8 @@ void gs_session_init(struct gs_session_data *sesh, char *client_name, int bpm, i
     // open jack client
     sesh->jack_client = jack_client_open(client_name, JackNullOption, NULL);
 	if (sesh->jack_client == 0) {
-        fprintf (stderr, "JACK server not running?\n");
+        fprintf(stderr, "JACK server not running?\n");
+        exit(1);
 	}
 
     // get jack server parameters
@@ -57,25 +70,55 @@ void gs_session_init(struct gs_session_data *sesh, char *client_name, int bpm, i
     sesh->jack_port_out = jack_port_register(sesh->jack_client, "out1", JACK_DEFAULT_MIDI_TYPE,
                                             JackPortIsOutput, 0);
     if (sesh->jack_port_out == NULL) {
-        fprintf (stderr, "could not register jack port\n");
+        fprintf(stderr, "failed to register jack port\n");
+        exit(1);
+    }
+
+    // allocate and lock ringbuffer
+    sesh->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(struct _session_ctrl_msg));
+    int err = jack_ringbuffer_mlock(sesh->rb);
+    if (err) {
+        fprintf(stderr, "failed to lock ringbuffer\n");
+        exit(1);
     }
 
     // activate jack client
 	if (jack_activate(sesh->jack_client)) { // this makes it pop up in carla, at least
-		fprintf (stderr, "cannot activate client");
+		fprintf(stderr, "failed to activate client\n");
+        exit(1);
 	}
 
 }
 
 void gs_session_start(struct gs_session_data *sesh) {
 
-    sesh->go = true;
+    int avail = jack_ringbuffer_write_space(sesh->rb);
+    if (avail < sizeof(struct _session_ctrl_msg)) {
+        fprintf(stderr, "session ringbuffer: overflow\n");
+        return;
+    }
+
+    struct _session_ctrl_msg msg;
+    msg.param = SESSION_GO;
+    msg.vb = true;
+
+    jack_ringbuffer_write(sesh->rb, (const char*) &msg, sizeof(struct _session_ctrl_msg));
 
 }
 
 void gs_session_stop(struct gs_session_data *sesh) {
 
-    sesh->go = false;
+    int avail = jack_ringbuffer_write_space(sesh->rb);
+    if (avail < sizeof(struct _session_ctrl_msg)) {
+        fprintf(stderr, "session ringbuffer: overflow\n");
+        return;
+    }
+
+    struct _session_ctrl_msg msg;
+    msg.param = SESSION_GO;
+    msg.vb = false;
+
+    jack_ringbuffer_write(sesh->rb, (const char*) &msg, sizeof(struct _session_ctrl_msg));
 
 }
 

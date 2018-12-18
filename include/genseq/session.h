@@ -6,11 +6,26 @@
 
 #include "sequence.h"
 
+// (config parameters)
 #define MAX_NSEQ 256
+#define RINGBUFFER_LENGTH 16
 
-// for bpm translation:
+// (constants for bpm translation)
 #define STEPS_PER_BEAT 4
 #define SECONDS_PER_MINUTE 60
+
+enum _session_param {SESSION_GO, SESSION_BPM};
+
+struct _session_ctrl_msg {
+
+    enum _session_param param;
+
+    // parameter-dependent value fields
+    int vi;
+    float vf;
+    bool vb;
+
+};
 
 struct gs_session_data {
 
@@ -26,6 +41,8 @@ struct gs_session_data {
 
     struct gs_sequence_data *seqs[MAX_NSEQ];
     int nseqs;
+
+    jack_ringbuffer_t *rb;
 
 };
 
