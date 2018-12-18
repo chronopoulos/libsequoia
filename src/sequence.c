@@ -7,12 +7,6 @@
 
 // <helper>
 
-inline jack_nframes_t _min_nframes(jack_nframes_t a, jack_nframes_t b ) {
-
-    return a < b ? a : b;
-
-}
-
 void _get_tick_indices_note(struct gs_sequence_data *seq, int step_index, struct gs_trigger_data *trig,
                                 int *tick_index_on, int *tick_index_off) {
 
@@ -33,12 +27,10 @@ void _get_tick_indices_note(struct gs_sequence_data *seq, int step_index, struct
 
 // </helper>
 
-void gs_sequence_init(struct gs_sequence_data *seq, int nsteps, int tps, int fpt) {
+void gs_sequence_init(struct gs_sequence_data *seq, int nsteps, int tps) {
 
     seq->nsteps = nsteps;
     seq->tps = tps;
-    seq->fpt = fpt;
-
     seq->name[0] = '\0';
     seq->transpose = 0;
 
@@ -47,17 +39,15 @@ void gs_sequence_init(struct gs_sequence_data *seq, int nsteps, int tps, int fpt
         gs_trigger_init(seq->trigs + i);
     }
 
-    seq->nticks = seq->nsteps * seq->tps;
 
+    // TODO move this to "render" method called by session_add_sequence()
+    seq->nticks = seq->nsteps * seq->tps;
     seq->ticks = malloc(seq->nticks * sizeof(midi_packet));
     for(int i=0; i<seq->nticks; i++) {
         seq->ticks[i][0] = 0;
     }
 
-    // paged timekeeping: when frame reaches fpt,
-    //  it rolls over and increments tick
     seq->tick = 0;
-    seq->frame = 0;
 
 }
 
@@ -108,40 +98,25 @@ void gs_sequence_clear_trig(struct gs_sequence_data *seq, int step_index) {
 
 }
 
-void gs_sequence_process(struct gs_sequence_data *seq, jack_nframes_t nframes,
-                            void *port_buf) {
+void gs_sequence_tick(struct gs_sequence_data *seq, void *port_buf, jack_nframes_t idx) {
 
     unsigned char *midi_msg_write_ptr;
-    jack_nframes_t nframes_left, frame_inc;
 
-    nframes_left = nframes;
+    // if the packet is non-empty, output the event
+    if (seq->ticks[seq->tick][0]) { // if status byte != 0
 
-    while(nframes_left) {
+        midi_msg_write_ptr = jack_midi_event_reserve(port_buf, idx, 3);
+        memcpy(midi_msg_write_ptr, seq->ticks[seq->tick], 3);
 
-        // if we're on a tick boundary, and the packet is non-empty.. output the event
-        if (seq->frame == 0) {
-
-            if (seq->ticks[seq->tick][0]) { // if status byte != 0
-
-                midi_msg_write_ptr = jack_midi_event_reserve(port_buf, nframes - nframes_left, 3);
-                memcpy(midi_msg_write_ptr, seq->ticks[seq->tick], 3);
-                midi_msg_write_ptr[1] += seq->transpose;
-
-            }
-
-        }
-
-        // increment to the next tick
-        frame_inc = _min_nframes(seq->fpt - seq->frame, nframes_left);
-        seq->frame += frame_inc;
-        nframes_left -= frame_inc;
-        if (seq->frame == seq->fpt) {
-            seq->frame = 0;
-            if (++(seq->tick) == seq->nticks) {
-                seq->tick = 0;
-            }
-        }
+        // apply transpose
+        midi_msg_write_ptr[1] += seq->transpose;
 
     }
 
+    // increment tick counter
+    if (++(seq->tick) == seq->nticks) {
+        seq->tick = 0;
+    }
+
 }
+

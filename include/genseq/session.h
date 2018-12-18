@@ -9,6 +9,7 @@
 // (config parameters)
 #define MAX_NSEQ 256
 #define RINGBUFFER_LENGTH 16
+#define DEFAULT_BPM 120.00
 
 // (constants for bpm translation)
 #define STEPS_PER_BEAT 4
@@ -29,7 +30,7 @@ struct _session_ctrl_msg {
 
 struct gs_session_data {
 
-    int bpm; // beats per minute
+    float bpm; // beats per minute
     int tps; // ticks per step
     int fpt; // frames per tick
     bool go;
@@ -44,11 +45,14 @@ struct gs_session_data {
 
     jack_ringbuffer_t *rb;
 
+    jack_nframes_t frame;
+
 };
 
-void gs_session_init(struct gs_session_data*, char*, int, int);
+void gs_session_init(struct gs_session_data*, char*, int);
 void gs_session_start(struct gs_session_data*);
 void gs_session_stop(struct gs_session_data*);
+void gs_session_set_bpm(struct gs_session_data*, float);
 void gs_session_add_sequence(struct gs_session_data*, struct gs_sequence_data*);
 void gs_session_wait(struct gs_session_data*);
 
