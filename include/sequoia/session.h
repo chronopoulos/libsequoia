@@ -25,16 +25,16 @@ struct _session_ctrl_msg {
     int vi;
     float vf;
     bool vb;
-    struct gs_sequence_data *vp;
+    struct sq_sequence_data *vp;
 
 };
 
-struct gs_session_data {
+struct sq_session_data {
 
     // these things are accessible from the UI thread
     float bpm; // beats per minute
     bool go;
-    struct gs_sequence_data *seqs[MAX_NSEQ];
+    struct sq_sequence_data *seqs[MAX_NSEQ];
     int nseqs;
 
     int tps; // ticks per step
@@ -52,12 +52,12 @@ struct gs_session_data {
 
 };
 
-void gs_session_init(struct gs_session_data*, char*, int);
-void gs_session_start(struct gs_session_data*);
-void gs_session_stop(struct gs_session_data*);
-void gs_session_set_bpm(struct gs_session_data*, float);
-void gs_session_add_sequence(struct gs_session_data*, struct gs_sequence_data*);
-void gs_session_rm_sequence(struct gs_session_data*, struct gs_sequence_data*);
-void gs_session_wait(struct gs_session_data*);
+void sq_session_init(struct sq_session_data*, char*, int);
+void sq_session_start(struct sq_session_data*);
+void sq_session_stop(struct sq_session_data*);
+void sq_session_set_bpm(struct sq_session_data*, float);
+void sq_session_add_sequence(struct sq_session_data*, struct sq_sequence_data*);
+void sq_session_rm_sequence(struct sq_session_data*, struct sq_sequence_data*);
+void sq_session_wait(struct sq_session_data*);
 
 #endif

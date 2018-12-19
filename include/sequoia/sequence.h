@@ -19,16 +19,16 @@ struct _sequence_ctrl_msg {
     int vi;
     float vf;
     bool vb;
-    struct gs_trigger_data *vp;
+    struct sq_trigger_data *vp;
 
 };
 
-struct gs_sequence_data {
+struct sq_sequence_data {
 
     // these are accessible from the UI thread
     char name[MAX_NAME_LENGTH + 1];
     int transpose;
-    struct gs_trigger_data *trigs;
+    struct sq_trigger_data *trigs;
     midi_packet *ticks;
     int tick;
 
@@ -40,13 +40,13 @@ struct gs_sequence_data {
 
 };
 
-void gs_sequence_init(struct gs_sequence_data*, int, int);
-void gs_sequence_set_name(struct gs_sequence_data*, const char*);
-void gs_sequence_set_raw_tick(struct gs_sequence_data*, int, midi_packet*);
-void gs_sequence_set_trig(struct gs_sequence_data*, int, struct gs_trigger_data*);
-void gs_sequence_clear_trig(struct gs_sequence_data*, int);
-void gs_sequence_tick(struct gs_sequence_data*, void*, jack_nframes_t);
-void gs_sequence_set_transpose(struct gs_sequence_data*, int);
-void gs_sequence_set_tick(struct gs_sequence_data*, int);
+void sq_sequence_init(struct sq_sequence_data*, int, int);
+void sq_sequence_set_name(struct sq_sequence_data*, const char*);
+void sq_sequence_set_raw_tick(struct sq_sequence_data*, int, midi_packet*);
+void sq_sequence_set_trig(struct sq_sequence_data*, int, struct sq_trigger_data*);
+void sq_sequence_clear_trig(struct sq_sequence_data*, int);
+void sq_sequence_tick(struct sq_sequence_data*, void*, jack_nframes_t);
+void sq_sequence_set_transpose(struct sq_sequence_data*, int);
+void sq_sequence_set_tick(struct sq_sequence_data*, int);
 
 #endif

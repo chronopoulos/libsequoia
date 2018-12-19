@@ -3,7 +3,7 @@
 #include <math.h>
 #include <jack/midiport.h>
 
-#include "genseq.h"
+#include "sequoia.h"
 
 // <helper>
 
@@ -13,7 +13,7 @@ inline jack_nframes_t _min_nframes(jack_nframes_t a, jack_nframes_t b ) {
 
 }
 
-void _session_ringbuffer_write(struct gs_session_data *sesh, struct _session_ctrl_msg *msg) {
+void _session_ringbuffer_write(struct sq_session_data *sesh, struct _session_ctrl_msg *msg) {
 
     int avail = jack_ringbuffer_write_space(sesh->rb);
     if (avail < sizeof(struct _session_ctrl_msg)) {
@@ -25,7 +25,7 @@ void _session_ringbuffer_write(struct gs_session_data *sesh, struct _session_ctr
 
 }
 
-void _session_handle_bpm_change(struct gs_session_data *sesh) {
+void _session_handle_bpm_change(struct sq_session_data *sesh) {
 
     // calculate frames per tick (fpt) (no need to cast becasue sesh->bpm is a float)
     float fpt = (sesh->sr * SECONDS_PER_MINUTE) / (sesh->tps * sesh->bpm * STEPS_PER_BEAT);
@@ -43,7 +43,7 @@ void _session_handle_bpm_change(struct gs_session_data *sesh) {
 
 }
 
-void _session_serve_ctrl_msgs(struct gs_session_data *sesh) {
+void _session_serve_ctrl_msgs(struct sq_session_data *sesh) {
 
     int avail = jack_ringbuffer_read_space(sesh->rb);
     struct _session_ctrl_msg msg;
@@ -94,7 +94,7 @@ void _session_serve_ctrl_msgs(struct gs_session_data *sesh) {
 
 static int _process(jack_nframes_t nframes, void *arg) {
 
-    struct gs_session_data *sesh = (struct gs_session_data*) arg;
+    struct sq_session_data *sesh = (struct sq_session_data*) arg;
 
     _session_serve_ctrl_msgs(sesh);
 
@@ -111,7 +111,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
             // if we're on a tick boundary, call _tick() on each sequence
             if (sesh->frame == 0) {
                 for (int i=0; i<sesh->nseqs; i++) {
-                    gs_sequence_tick(sesh->seqs[i], output_port_buf, nframes - nframes_left);
+                    sq_sequence_tick(sesh->seqs[i], output_port_buf, nframes - nframes_left);
                 }
             }
 
@@ -131,7 +131,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 }
 
-void gs_session_init(struct gs_session_data *sesh, char *client_name, int tps) {
+void sq_session_init(struct sq_session_data *sesh, char *client_name, int tps) {
 
     // initialize struct members
     sesh->go = false;
@@ -181,7 +181,7 @@ void gs_session_init(struct gs_session_data *sesh, char *client_name, int tps) {
 
 }
 
-void gs_session_start(struct gs_session_data *sesh) {
+void sq_session_start(struct sq_session_data *sesh) {
 
     struct _session_ctrl_msg msg;
     msg.param = SESSION_GO;
@@ -191,7 +191,7 @@ void gs_session_start(struct gs_session_data *sesh) {
 
 }
 
-void gs_session_stop(struct gs_session_data *sesh) {
+void sq_session_stop(struct sq_session_data *sesh) {
 
     struct _session_ctrl_msg msg;
     msg.param = SESSION_GO;
@@ -201,7 +201,7 @@ void gs_session_stop(struct gs_session_data *sesh) {
 
 }
 
-void gs_session_set_bpm(struct gs_session_data *sesh, float bpm) {
+void sq_session_set_bpm(struct sq_session_data *sesh, float bpm) {
 
     struct _session_ctrl_msg msg;
     msg.param = SESSION_BPM;
@@ -211,7 +211,7 @@ void gs_session_set_bpm(struct gs_session_data *sesh, float bpm) {
 
 }
 
-void gs_session_add_sequence(struct gs_session_data *sesh, struct gs_sequence_data *seq) {
+void sq_session_add_sequence(struct sq_session_data *sesh, struct sq_sequence_data *seq) {
 
     if (seq->tps != sesh->tps) {
         fprintf(stderr, "seq->tps doesn't match sesh->tps: %d vs %d\n", seq->tps, sesh->tps);
@@ -226,7 +226,7 @@ void gs_session_add_sequence(struct gs_session_data *sesh, struct gs_sequence_da
 
 }
 
-void gs_session_rm_sequence(struct gs_session_data *sesh, struct gs_sequence_data *seq) {
+void sq_session_rm_sequence(struct sq_session_data *sesh, struct sq_sequence_data *seq) {
 
     // NOTE: this does not free the memory pointed to by seq;
     //  the caller must do that explicitly
@@ -239,7 +239,7 @@ void gs_session_rm_sequence(struct gs_session_data *sesh, struct gs_sequence_dat
 
 }
 
-void gs_session_wait(struct gs_session_data *sesh) {
+void sq_session_wait(struct sq_session_data *sesh) {
 
     while(1) {
         usleep(1000);

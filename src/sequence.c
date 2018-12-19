@@ -3,11 +3,11 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "genseq.h"
+#include "sequoia.h"
 
 // <helper>
 
-void _get_tick_indices_note(struct gs_sequence_data *seq, int step_index, struct gs_trigger_data *trig,
+void _get_tick_indices_note(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig,
                                 int *tick_index_on, int *tick_index_off) {
 
     int index_on, index_off;
@@ -25,7 +25,7 @@ void _get_tick_indices_note(struct gs_sequence_data *seq, int step_index, struct
 
 }
 
-void _sequence_ringbuffer_write(struct gs_sequence_data *seq, struct _sequence_ctrl_msg *msg) {
+void _sequence_ringbuffer_write(struct sq_sequence_data *seq, struct _sequence_ctrl_msg *msg) {
 
     int avail = jack_ringbuffer_write_space(seq->rb);
     if (avail < sizeof(struct _sequence_ctrl_msg)) {
@@ -37,7 +37,7 @@ void _sequence_ringbuffer_write(struct gs_sequence_data *seq, struct _sequence_c
 
 }
 
-void _sequence_serve_ctrl_msgs(struct gs_sequence_data *seq) {
+void _sequence_serve_ctrl_msgs(struct sq_sequence_data *seq) {
 
     int avail = jack_ringbuffer_read_space(seq->rb);
     struct _sequence_ctrl_msg msg;
@@ -59,16 +59,16 @@ void _sequence_serve_ctrl_msgs(struct gs_sequence_data *seq) {
 
 // </helper>
 
-void gs_sequence_init(struct gs_sequence_data *seq, int nsteps, int tps) {
+void sq_sequence_init(struct sq_sequence_data *seq, int nsteps, int tps) {
 
     seq->nsteps = nsteps;
     seq->tps = tps;
     seq->name[0] = '\0';
     seq->transpose = 0;
 
-    seq->trigs = malloc(seq->nsteps * sizeof(struct gs_trigger_data));
+    seq->trigs = malloc(seq->nsteps * sizeof(struct sq_trigger_data));
     for (int i=0; i<seq->nsteps; i++) {
-        gs_trigger_init(seq->trigs + i);
+        sq_trigger_init(seq->trigs + i);
     }
 
     seq->nticks = seq->nsteps * seq->tps;
@@ -90,21 +90,21 @@ void gs_sequence_init(struct gs_sequence_data *seq, int nsteps, int tps) {
 
 }
 
-void gs_sequence_set_name(struct gs_sequence_data *seq, const char *name) {
+void sq_sequence_set_name(struct sq_sequence_data *seq, const char *name) {
 
     strcpy(seq->name, name);
 
 }
 
-void gs_sequence_set_raw_tick(struct gs_sequence_data *seq, int tick_index, midi_packet *pkt) {
+void sq_sequence_set_raw_tick(struct sq_sequence_data *seq, int tick_index, midi_packet *pkt) {
 
     memcpy(seq->ticks + tick_index, pkt, sizeof(midi_packet));
 
 }
 
-void gs_sequence_set_trig(struct gs_sequence_data *seq, int step_index, struct gs_trigger_data *trig) {
+void sq_sequence_set_trig(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig) {
 
-    memcpy(seq->trigs + step_index, trig, sizeof(struct gs_trigger_data));
+    memcpy(seq->trigs + step_index, trig, sizeof(struct sq_trigger_data));
 
     int tick_index_on, tick_index_off;
     midi_packet pkt_on, pkt_off;
@@ -115,29 +115,29 @@ void gs_sequence_set_trig(struct gs_sequence_data *seq, int step_index, struct g
         pkt_on[0] = 143 + trig->channel; // note on
         pkt_on[1] = trig->note;
         pkt_on[2] = trig->velocity;
-        gs_sequence_set_raw_tick(seq, tick_index_on, &pkt_on);
+        sq_sequence_set_raw_tick(seq, tick_index_on, &pkt_on);
 
         pkt_off[0] = 127 + trig->channel; // note off
         pkt_off[1] = trig->note;
         pkt_off[2] = trig->velocity; // what should we put here?
-        gs_sequence_set_raw_tick(seq, tick_index_off, &pkt_off);
+        sq_sequence_set_raw_tick(seq, tick_index_off, &pkt_off);
 
     }
 
 }
 
-void gs_sequence_clear_trig(struct gs_sequence_data *seq, int step_index) {
+void sq_sequence_clear_trig(struct sq_sequence_data *seq, int step_index) {
 
     int tick_index_on, tick_index_off;
     midi_packet empty_packet = {0, 0, 0};
     _get_tick_indices_note(seq, step_index, seq->trigs + step_index, &tick_index_on, &tick_index_off);
 
-    gs_sequence_set_raw_tick(seq, tick_index_on, &empty_packet);
-    gs_sequence_set_raw_tick(seq, tick_index_off, &empty_packet);
+    sq_sequence_set_raw_tick(seq, tick_index_on, &empty_packet);
+    sq_sequence_set_raw_tick(seq, tick_index_off, &empty_packet);
 
 }
 
-void gs_sequence_tick(struct gs_sequence_data *seq, void *port_buf, jack_nframes_t idx) {
+void sq_sequence_tick(struct sq_sequence_data *seq, void *port_buf, jack_nframes_t idx) {
 
     _sequence_serve_ctrl_msgs(seq);
 
@@ -161,7 +161,7 @@ void gs_sequence_tick(struct gs_sequence_data *seq, void *port_buf, jack_nframes
 
 }
 
-void gs_sequence_set_transpose(struct gs_sequence_data *seq, int transpose) {
+void sq_sequence_set_transpose(struct sq_sequence_data *seq, int transpose) {
 
     struct _sequence_ctrl_msg msg;
     msg.param = SEQUENCE_TRANSPOSE;
@@ -171,7 +171,7 @@ void gs_sequence_set_transpose(struct gs_sequence_data *seq, int transpose) {
 
 }
 
-void gs_sequence_set_tick(struct gs_sequence_data *seq, int tick) {
+void sq_sequence_set_tick(struct sq_sequence_data *seq, int tick) {
 
     if ( (tick < 0) || (tick >= seq->nticks) ) {
         fprintf(stderr, "tick value out of range: %d\n", tick);
