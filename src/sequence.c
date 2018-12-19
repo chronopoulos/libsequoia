@@ -2,26 +2,21 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <math.h>
 
 #include "sequoia.h"
 
 // <helper>
 
-void _get_tick_indices_note(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig,
-                                int *tick_index_on, int *tick_index_off) {
+int _get_tick_index_trig(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig) {
 
-    int index_on, index_off;
+    // TODO: trig = seq->trigs + step_index ?
 
-    index_on = (step_index + trig->microtime) * seq->tps;
-    if (index_on < 0) index_on = 0;
-    if (index_on >= seq->nticks) index_on = seq->nticks - 1;
+    int tick_index = (step_index + trig->microtime) * seq->tps;
+    if (tick_index < 0) tick_index = 0;
+    if (tick_index >= seq->nticks) tick_index = seq->nticks - 1;
 
-    index_off = index_on + trig->length*seq->tps;
-    if (index_off < 0) index_off = 0;
-    if (index_off >= seq->nticks) index_off = seq->nticks - 1;
-
-    *tick_index_on = index_on;
-    *tick_index_off = index_off;
+    return tick_index;
 
 }
 
@@ -48,7 +43,7 @@ void _sequence_serve_ctrl_msgs(struct sq_sequence_data *seq) {
         if (msg.param == SEQUENCE_TRANSPOSE) {
             seq->transpose = msg.vi;
         } else if (msg.param == SEQUENCE_TICK) {
-            seq->tick = msg.vi;
+            seq->ph = msg.vi;
         }
 
         avail -= sizeof(struct _sequence_ctrl_msg);
@@ -72,12 +67,18 @@ void sq_sequence_init(struct sq_sequence_data *seq, int nsteps, int tps) {
     }
 
     seq->nticks = seq->nsteps * seq->tps;
-    seq->ticks = malloc(seq->nticks * sizeof(midi_packet));
-    for(int i=0; i<seq->nticks; i++) {
-        seq->ticks[i][0] = 0;
-    }
 
-    seq->tick = 0;
+    seq->microgrid = malloc(seq->nticks * sizeof(struct sq_trigger_data*));
+    for(int i=0; i<seq->nticks; i++) {
+        seq->microgrid[i] = NULL;
+    }
+    seq->ph = 0;
+
+    seq->buf_off = malloc(seq->nticks * sizeof(midi_packet));
+    for(int i=0; i<seq->nticks; i++) {
+        seq->buf_off[i][0] = 0;
+    }
+    seq->ridx_off = 0;
 
     // allocate and lock ringbuffer (universal ringbuffer length?)
     seq->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(struct _sequence_ctrl_msg));
@@ -96,44 +97,22 @@ void sq_sequence_set_name(struct sq_sequence_data *seq, const char *name) {
 
 }
 
-void sq_sequence_set_raw_tick(struct sq_sequence_data *seq, int tick_index, midi_packet *pkt) {
-
-    memcpy(seq->ticks + tick_index, pkt, sizeof(midi_packet));
-
-}
-
 void sq_sequence_set_trig(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig) {
 
     memcpy(seq->trigs + step_index, trig, sizeof(struct sq_trigger_data));
-
-    int tick_index_on, tick_index_off;
-    midi_packet pkt_on, pkt_off;
+    int tick_index;
     if (trig->type == TRIG_NOTE) {
-
-        _get_tick_indices_note(seq, step_index, trig, &tick_index_on, &tick_index_off);
-
-        pkt_on[0] = 143 + trig->channel; // note on
-        pkt_on[1] = trig->note;
-        pkt_on[2] = trig->velocity;
-        sq_sequence_set_raw_tick(seq, tick_index_on, &pkt_on);
-
-        pkt_off[0] = 127 + trig->channel; // note off
-        pkt_off[1] = trig->note;
-        pkt_off[2] = trig->velocity; // what should we put here?
-        sq_sequence_set_raw_tick(seq, tick_index_off, &pkt_off);
-
+        tick_index = _get_tick_index_trig(seq, step_index, trig);
+        seq->microgrid[tick_index] = seq->trigs + step_index;
     }
 
 }
 
 void sq_sequence_clear_trig(struct sq_sequence_data *seq, int step_index) {
 
-    int tick_index_on, tick_index_off;
-    midi_packet empty_packet = {0, 0, 0};
-    _get_tick_indices_note(seq, step_index, seq->trigs + step_index, &tick_index_on, &tick_index_off);
-
-    sq_sequence_set_raw_tick(seq, tick_index_on, &empty_packet);
-    sq_sequence_set_raw_tick(seq, tick_index_off, &empty_packet);
+    struct sq_trigger_data *trig = seq->trigs + step_index;
+    seq->microgrid[_get_tick_index_trig(seq, step_index, trig)] = NULL;
+    trig->type = TRIG_NULL;
 
 }
 
@@ -143,20 +122,40 @@ void sq_sequence_tick(struct sq_sequence_data *seq, void *port_buf, jack_nframes
 
     unsigned char *midi_msg_write_ptr;
 
-    // if the packet is non-empty, output the event
-    if (seq->ticks[seq->tick][0]) { // if status byte != 0
-
+    // handle any triggers in microgrid
+    struct sq_trigger_data *trig;
+    int widx_off;
+    if ((trig = seq->microgrid[seq->ph])) { // if non-NULL
         midi_msg_write_ptr = jack_midi_event_reserve(port_buf, idx, 3);
-        memcpy(midi_msg_write_ptr, seq->ticks[seq->tick], 3);
+        if (trig->type == TRIG_NOTE) {
 
-        // apply transpose
-        midi_msg_write_ptr[1] += seq->transpose;
+            midi_msg_write_ptr[0] = 143 + trig->channel;
+            midi_msg_write_ptr[1] = trig->note + seq->transpose;
+            midi_msg_write_ptr[2] = trig->velocity;
 
+            widx_off = (seq->ridx_off + (int)roundl(trig->length * seq->tps)) % seq->nticks;
+            seq->buf_off[widx_off][0] = 127 + trig->channel;
+            seq->buf_off[widx_off][1] = trig->note + seq->transpose;
+            seq->buf_off[widx_off][2] = trig->velocity;
+
+        }
     }
 
-    // increment tick counter
-    if (++(seq->tick) == seq->nticks) {
-        seq->tick = 0;
+    // increment ph
+    if (++(seq->ph) == seq->nticks) {
+        seq->ph = 0;
+    }
+
+    // handle any events in buf_off
+    if (seq->buf_off[seq->ridx_off][0]) {  // if status byte != 0
+        midi_msg_write_ptr = jack_midi_event_reserve(port_buf, idx, 3);
+        memcpy(midi_msg_write_ptr, seq->buf_off[seq->ridx_off], 3);
+        seq->buf_off[seq->ridx_off][0] = 0;  // clear this event
+    }
+
+    // increment ridx_off
+    if (++(seq->ridx_off) == seq->nticks) {
+        seq->ridx_off = 0;
     }
 
 }
