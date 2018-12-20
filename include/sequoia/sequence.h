@@ -34,6 +34,10 @@ struct sq_sequence_data {
     midi_packet *buf_off;
     int ridx_off;
 
+    // TBD
+    jack_port_t *outport;
+    void *outport_buf;
+
     // this is only touched by UI
     bool is_playing;
 
@@ -46,9 +50,12 @@ struct sq_sequence_data {
 };
 
 void sq_sequence_init(struct sq_sequence_data*, int, int);
-void sq_sequence_tick(struct sq_sequence_data*, void*, jack_nframes_t);
+
+void _sequence_prepare_outport(struct sq_sequence_data*, jack_nframes_t);
+void _sequence_tick(struct sq_sequence_data*, jack_nframes_t);
 
 void sq_sequence_set_name(struct sq_sequence_data*, const char*);
+void sq_sequence_set_outport(struct sq_sequence_data*, jack_port_t*);
 
 void sq_sequence_set_trig(struct sq_sequence_data*, int, struct sq_trigger_data*);
 void _sequence_set_trig_now(struct sq_sequence_data*, int, struct sq_trigger_data*);

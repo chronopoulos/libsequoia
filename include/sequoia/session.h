@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <jack/jack.h>
+#include <jack/midiport.h>
 
 #include "sequence.h"
 
@@ -44,7 +45,6 @@ struct sq_session_data {
     int tps; // ticks per step
     int fpt; // frames per tick
     jack_client_t *jack_client;
-    jack_port_t *jack_port_out;
     jack_nframes_t sr; // sample rate
     jack_nframes_t bs; // buffer size
     jack_ringbuffer_t *rb;
@@ -54,7 +54,8 @@ struct sq_session_data {
 
 };
 
-void sq_session_init(struct sq_session_data*, char*, int);
+void sq_session_init(struct sq_session_data*, const char*, int);
+jack_port_t *sq_session_create_outport(struct sq_session_data *, const char*);
 void sq_session_start(struct sq_session_data*);
 void sq_session_stop(struct sq_session_data*);
 

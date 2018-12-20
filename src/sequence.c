@@ -94,19 +94,34 @@ void sq_sequence_init(struct sq_sequence_data *seq, int nsteps, int tps) {
 
     seq->is_playing = false;
 
+    seq->outport = NULL;
+    seq->outport_buf = NULL;
+
 }
 
-void sq_sequence_tick(struct sq_sequence_data *seq, void *port_buf, jack_nframes_t idx) {
+void _sequence_prepare_outport(struct sq_sequence_data *seq, jack_nframes_t nframes) {
+
+    /* this should be called once per sequence at the start of a processing callback */
+
+    seq->outport_buf = jack_port_get_buffer(seq->outport, nframes);
+    jack_midi_clear_buffer(seq->outport_buf);
+
+}
+
+void _sequence_tick(struct sq_sequence_data *seq, jack_nframes_t idx) {
+
+    /* this should called once per sequence, every time the session frame
+        counter crosses a tick boundary */
 
     _sequence_serve_ctrl_msgs(seq);
 
     unsigned char *midi_msg_write_ptr;
 
-    // handle any triggers in microgrid
+    // handle any triggers from the microgrid
     struct sq_trigger_data *trig;
     int widx_off;
     if ((trig = seq->microgrid[seq->ph])) { // if non-NULL
-        midi_msg_write_ptr = jack_midi_event_reserve(port_buf, idx, 3);
+        midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
         if (trig->type == TRIG_NOTE) {
 
             midi_msg_write_ptr[0] = 143 + trig->channel;
@@ -128,7 +143,7 @@ void sq_sequence_tick(struct sq_sequence_data *seq, void *port_buf, jack_nframes
 
     // handle any events in buf_off
     if (seq->buf_off[seq->ridx_off][0]) {  // if status byte != 0
-        midi_msg_write_ptr = jack_midi_event_reserve(port_buf, idx, 3);
+        midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
         memcpy(midi_msg_write_ptr, seq->buf_off[seq->ridx_off], 3);
         seq->buf_off[seq->ridx_off][0] = 0;  // clear this event
     }
@@ -144,6 +159,12 @@ void sq_sequence_set_name(struct sq_sequence_data *seq, const char *name) {
 
     // this parameter is safe to touch directly (for now)
     strcpy(seq->name, name);
+
+}
+
+void sq_sequence_set_outport(struct sq_sequence_data *seq, jack_port_t *port) {
+
+    seq->outport = port;
 
 }
 

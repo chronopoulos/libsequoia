@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <math.h>
-#include <jack/midiport.h>
 
 #include "sequoia.h"
 
@@ -64,12 +63,13 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
     _session_serve_ctrl_msgs(sesh);
 
-    void *output_port_buf; // cannot be cached! see jack.h
-    output_port_buf = jack_port_get_buffer(sesh->jack_port_out, nframes);
-    jack_midi_clear_buffer(output_port_buf);
-
     jack_nframes_t nframes_left, frame_inc;
     if (sesh->go) {
+
+        // do this once per port, per processing callback
+        for (int i=0; i<sesh->nseqs; i++) {
+            _sequence_prepare_outport(sesh->seqs[i], nframes);
+        }
 
         nframes_left = nframes;
         while(nframes_left) {
@@ -77,7 +77,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
             // if we're on a tick boundary, call _tick() on each sequence
             if (sesh->frame == 0) {
                 for (int i=0; i<sesh->nseqs; i++) {
-                    sq_sequence_tick(sesh->seqs[i], output_port_buf, nframes - nframes_left);
+                    _sequence_tick(sesh->seqs[i], nframes - nframes_left);
                 }
             }
 
@@ -97,7 +97,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 }
 
-void sq_session_init(struct sq_session_data *sesh, char *client_name, int tps) {
+void sq_session_init(struct sq_session_data *sesh, const char *client_name, int tps) {
 
     // initialize struct members
     sesh->go = false;
@@ -121,14 +121,6 @@ void sq_session_init(struct sq_session_data *sesh, char *client_name, int tps) {
     // set jack process callback
 	jack_set_process_callback(sesh->jack_client, _process, sesh);
 
-    // register jack MIDI output port
-    sesh->jack_port_out = jack_port_register(sesh->jack_client, "out1", JACK_DEFAULT_MIDI_TYPE,
-                                            JackPortIsOutput, 0);
-    if (sesh->jack_port_out == NULL) {
-        fprintf(stderr, "failed to register jack port\n");
-        exit(1);
-    }
-
     // allocate and lock ringbuffer
     sesh->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(struct _session_ctrl_msg));
     int err = jack_ringbuffer_mlock(sesh->rb);
@@ -138,12 +130,27 @@ void sq_session_init(struct sq_session_data *sesh, char *client_name, int tps) {
     }
 
     // activate jack client
-	if (jack_activate(sesh->jack_client)) { // this makes it pop up in carla, at least
+	if (jack_activate(sesh->jack_client)) {
 		fprintf(stderr, "failed to activate client\n");
         exit(1);
 	}
 
     sesh->is_playing = false;
+
+}
+
+jack_port_t *sq_session_create_outport(struct sq_session_data *sesh, const char *name) {
+
+    jack_port_t *port;
+
+    port = jack_port_register(sesh->jack_client, name, JACK_DEFAULT_MIDI_TYPE,
+                                JackPortIsOutput, 0);
+
+    if (!port) {
+        fprintf(stderr, "failed to create outport\n");
+    }
+
+    return port; // possibly NULL
 
 }
 
