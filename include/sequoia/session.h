@@ -58,6 +58,5 @@ void sq_session_stop(struct sq_session_data*);
 void sq_session_set_bpm(struct sq_session_data*, float);
 void sq_session_add_sequence(struct sq_session_data*, struct sq_sequence_data*);
 void sq_session_rm_sequence(struct sq_session_data*, struct sq_sequence_data*);
-void sq_session_wait(struct sq_session_data*);
 
 #endif

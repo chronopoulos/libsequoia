@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <unistd.h>
 #include <math.h>
 #include <jack/midiport.h>
 
@@ -236,14 +235,6 @@ void sq_session_rm_sequence(struct sq_session_data *sesh, struct sq_sequence_dat
     msg.vp = seq;
 
     _session_ringbuffer_write(sesh, &msg);
-
-}
-
-void sq_session_wait(struct sq_session_data *sesh) {
-
-    while(1) {
-        usleep(1000);
-    }
 
 }
 
