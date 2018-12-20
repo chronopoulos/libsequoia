@@ -24,24 +24,6 @@ void _session_ringbuffer_write(struct sq_session_data *sesh, struct _session_ctr
 
 }
 
-void _session_handle_bpm_change(struct sq_session_data *sesh) {
-
-    // calculate frames per tick (fpt) (no need to cast becasue sesh->bpm is a float)
-    float fpt = (sesh->sr * SECONDS_PER_MINUTE) / (sesh->tps * sesh->bpm * STEPS_PER_BEAT);
-
-    // and round to nearest int
-    sesh->fpt = round(fpt);
-
-    // if an increase in tempo has lowered the fpt below the current frame index,
-    //  then reset the frame index to avoid a runaway frame count
-    // (note that we could also achieve this using (sesh->frame >= sesh->fpt) in _process(),
-    //  but this method ensures that we don't skip a beat on tempo increases
-    if (sesh->frame >= sesh->fpt) {
-        sesh->frame = 0;
-    }
-
-}
-
 void _session_serve_ctrl_msgs(struct sq_session_data *sesh) {
 
     int avail = jack_ringbuffer_read_space(sesh->rb);
@@ -56,30 +38,15 @@ void _session_serve_ctrl_msgs(struct sq_session_data *sesh) {
 
         } else if (msg.param == SESSION_BPM) {
 
-            sesh->bpm = msg.vf;
-            _session_handle_bpm_change(sesh);
+            _session_set_bpm_now(sesh, msg.vf);
 
         } else if (msg.param == SESSION_ADD_SEQ) {
 
-            sesh->seqs[sesh->nseqs] = msg.vp;
-            sesh->nseqs++;
+            _session_add_sequence_now(sesh, msg.vp);
 
         } else if (msg.param == SESSION_RM_SEQ) {
 
-            int i;
-
-            for (i=0; i<sesh->nseqs; i++) {
-                if (sesh->seqs[i] == msg.vp) {
-                    break;
-                }
-            }
-
-            if (i < sesh->nseqs) { // then we found it at i
-                sesh->nseqs--; // decrement nseqs
-                for (; i<sesh->nseqs; i++) {
-                    sesh->seqs[i] = sesh->seqs[i+1]; // left-shift the tail of the vector
-                }
-            } // else do nothing
+            _session_rm_sequence_now(sesh, msg.vp);
 
         }
 
@@ -134,7 +101,6 @@ void sq_session_init(struct sq_session_data *sesh, char *client_name, int tps) {
 
     // initialize struct members
     sesh->go = false;
-    sesh->bpm = DEFAULT_BPM;
     sesh->tps = tps;
     sesh->nseqs = 0;
     sesh->frame = 0;
@@ -150,8 +116,7 @@ void sq_session_init(struct sq_session_data *sesh, char *client_name, int tps) {
     sesh->sr = jack_get_sample_rate(sesh->jack_client);
     sesh->bs = jack_get_buffer_size(sesh->jack_client);
 
-    sesh->bpm = DEFAULT_BPM;
-    _session_handle_bpm_change(sesh);
+    _session_set_bpm_now(sesh, DEFAULT_BPM);
 
     // set jack process callback
 	jack_set_process_callback(sesh->jack_client, _process, sesh);
@@ -178,9 +143,16 @@ void sq_session_init(struct sq_session_data *sesh, char *client_name, int tps) {
         exit(1);
 	}
 
+    sesh->is_playing = false;
+
 }
 
 void sq_session_start(struct sq_session_data *sesh) {
+
+    sesh->is_playing = true;
+    for (int i=0; i<sesh->nseqs; i++) {
+        sesh->seqs[i]->is_playing = true;
+    }
 
     struct _session_ctrl_msg msg;
     msg.param = SESSION_GO;
@@ -192,21 +164,58 @@ void sq_session_start(struct sq_session_data *sesh) {
 
 void sq_session_stop(struct sq_session_data *sesh) {
 
+    sesh->is_playing = false;
+    for (int i=0; i<sesh->nseqs; i++) {
+        sesh->seqs[i]->is_playing = false;
+    }
+
     struct _session_ctrl_msg msg;
     msg.param = SESSION_GO;
     msg.vb = false;
 
     _session_ringbuffer_write(sesh, &msg);
 
+    for (int i=0; i<sesh->nseqs; i++) {
+        sesh->seqs[i]->is_playing = false;
+    }
+
 }
 
 void sq_session_set_bpm(struct sq_session_data *sesh, float bpm) {
 
-    struct _session_ctrl_msg msg;
-    msg.param = SESSION_BPM;
-    msg.vf = bpm;
+    if (sesh->is_playing) {
 
-    _session_ringbuffer_write(sesh, &msg);
+        struct _session_ctrl_msg msg;
+        msg.param = SESSION_BPM;
+        msg.vf = bpm;
+
+        _session_ringbuffer_write(sesh, &msg);
+
+    } else {
+
+        _session_set_bpm_now(sesh, bpm);
+
+    }
+
+}
+
+void _session_set_bpm_now(struct sq_session_data *sesh, float bpm) {
+
+    sesh->bpm = bpm;
+
+    // calculate frames per tick (fpt) (no need to cast becasue sesh->bpm is a float)
+    float fpt = (sesh->sr * SECONDS_PER_MINUTE) / (sesh->tps * sesh->bpm * STEPS_PER_BEAT);
+
+    // and round to nearest int
+    sesh->fpt = round(fpt);
+
+    // if an increase in tempo has lowered the fpt below the current frame index,
+    //  then reset the frame index to avoid a runaway frame count
+    // (note that we could also achieve this using (sesh->frame >= sesh->fpt) in _process(),
+    //  but this method ensures that we don't skip a beat on tempo increases
+    if (sesh->frame >= sesh->fpt) {
+        sesh->frame = 0;
+    }
 
 }
 
@@ -217,11 +226,26 @@ void sq_session_add_sequence(struct sq_session_data *sesh, struct sq_sequence_da
         return;
     }
 
-    struct _session_ctrl_msg msg;
-    msg.param = SESSION_ADD_SEQ;
-    msg.vp = seq;
+    if (sesh->is_playing) {
 
-    _session_ringbuffer_write(sesh, &msg);
+        struct _session_ctrl_msg msg;
+        msg.param = SESSION_ADD_SEQ;
+        msg.vp = seq;
+
+        _session_ringbuffer_write(sesh, &msg);
+
+    } else {
+
+        _session_add_sequence_now(sesh, seq);
+
+    }
+
+}
+
+void _session_add_sequence_now(struct sq_session_data *sesh, struct sq_sequence_data *seq) {
+
+    sesh->seqs[sesh->nseqs] = seq;
+    sesh->nseqs++;
 
 }
 
@@ -230,11 +254,38 @@ void sq_session_rm_sequence(struct sq_session_data *sesh, struct sq_sequence_dat
     // NOTE: this does not free the memory pointed to by seq;
     //  the caller must do that explicitly
 
-    struct _session_ctrl_msg msg;
-    msg.param = SESSION_RM_SEQ;
-    msg.vp = seq;
+    if (sesh->is_playing) {
 
-    _session_ringbuffer_write(sesh, &msg);
+        struct _session_ctrl_msg msg;
+        msg.param = SESSION_RM_SEQ;
+        msg.vp = seq;
+
+        _session_ringbuffer_write(sesh, &msg);
+
+    } else {
+
+        _session_rm_sequence_now(sesh, seq);
+
+    }
+
+}
+
+void _session_rm_sequence_now(struct sq_session_data *sesh, struct sq_sequence_data *seq) {
+
+    int i;
+
+    for (i=0; i<sesh->nseqs; i++) {
+        if (sesh->seqs[i] == seq) {
+            break;
+        }
+    }
+
+    if (i < sesh->nseqs) { // then we found it at i
+        sesh->nseqs--; // decrement nseqs
+        for (; i<sesh->nseqs; i++) {
+            sesh->seqs[i] = sesh->seqs[i+1]; // left-shift the tail of the vector
+        }
+    } // else do nothing
 
 }
 

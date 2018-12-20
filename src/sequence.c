@@ -40,10 +40,14 @@ void _sequence_serve_ctrl_msgs(struct sq_sequence_data *seq) {
 
         jack_ringbuffer_read(seq->rb, (char*) &msg, sizeof(struct _sequence_ctrl_msg));
 
-        if (msg.param == SEQUENCE_TRANSPOSE) {
-            seq->transpose = msg.vi;
+        if (msg.param == SEQUENCE_SET_TRIG) {
+            _sequence_set_trig_now(seq, msg.vi, msg.vp);
+        } else if (msg.param == SEQUENCE_CLEAR_TRIG) {
+            _sequence_clear_trig_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_TRANSPOSE) {
+            _sequence_set_transpose_now(seq, msg.vi);
         } else if (msg.param == SEQUENCE_PH) {
-            seq->ph = msg.vi;
+            _sequence_set_playhead_now(seq, msg.vi);
         }
 
         avail -= sizeof(struct _sequence_ctrl_msg);
@@ -88,31 +92,7 @@ void sq_sequence_init(struct sq_sequence_data *seq, int nsteps, int tps) {
         exit(1);
     }
 
-
-}
-
-void sq_sequence_set_name(struct sq_sequence_data *seq, const char *name) {
-
-    strcpy(seq->name, name);
-
-}
-
-void sq_sequence_set_trig(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig) {
-
-    memcpy(seq->trigs + step_index, trig, sizeof(struct sq_trigger_data));
-    int tick_index;
-    if (trig->type == TRIG_NOTE) {
-        tick_index = _get_tick_index_trig(seq, step_index, trig);
-        seq->microgrid[tick_index] = seq->trigs + step_index;
-    }
-
-}
-
-void sq_sequence_clear_trig(struct sq_sequence_data *seq, int step_index) {
-
-    struct sq_trigger_data *trig = seq->trigs + step_index;
-    seq->microgrid[_get_tick_index_trig(seq, step_index, trig)] = NULL;
-    trig->type = TRIG_NULL;
+    seq->is_playing = false;
 
 }
 
@@ -160,13 +140,107 @@ void sq_sequence_tick(struct sq_sequence_data *seq, void *port_buf, jack_nframes
 
 }
 
+void sq_sequence_set_name(struct sq_sequence_data *seq, const char *name) {
+
+    // this parameter is safe to touch directly (for now)
+    strcpy(seq->name, name);
+
+}
+
+void sq_sequence_set_trig(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig) {
+
+    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
+        fprintf(stderr, "step index %d out of range\n", step_index);
+        return;
+    }
+
+    if (seq->is_playing) {
+
+        struct _sequence_ctrl_msg msg;
+        msg.param = SEQUENCE_SET_TRIG;
+        msg.vi = step_index;
+        msg.vp = trig;
+
+        _sequence_ringbuffer_write(seq, &msg);
+
+    } else {
+
+        _sequence_set_trig_now(seq, step_index, trig);
+
+    }
+
+}
+
+void _sequence_set_trig_now(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig) {
+
+    /* this function should only be called from within the audio callback */
+
+    memcpy(seq->trigs + step_index, trig, sizeof(struct sq_trigger_data));
+    int tick_index;
+    if (trig->type == TRIG_NOTE) {
+        tick_index = _get_tick_index_trig(seq, step_index, trig);
+        seq->microgrid[tick_index] = seq->trigs + step_index;
+    }
+
+}
+
+
+void sq_sequence_clear_trig(struct sq_sequence_data *seq, int step_index) {
+
+    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
+        fprintf(stderr, "step index %d out of range\n", step_index);
+        return;
+    }
+
+    if (seq->is_playing) {
+
+        struct _sequence_ctrl_msg msg;
+        msg.param = SEQUENCE_SET_TRIG;
+        msg.vi = step_index;
+
+        _sequence_ringbuffer_write(seq, &msg);
+
+    } else {
+
+        _sequence_clear_trig_now(seq, step_index);
+
+    }
+
+}
+
+void _sequence_clear_trig_now(struct sq_sequence_data *seq, int step_index) {
+
+    /* this function should only be called from within the audio callback */
+
+    struct sq_trigger_data *trig = seq->trigs + step_index;
+    seq->microgrid[_get_tick_index_trig(seq, step_index, trig)] = NULL;
+    trig->type = TRIG_NULL;
+
+}
+
 void sq_sequence_set_transpose(struct sq_sequence_data *seq, int transpose) {
 
-    struct _sequence_ctrl_msg msg;
-    msg.param = SEQUENCE_TRANSPOSE;
-    msg.vi = transpose;
+    if (seq->is_playing) {
 
-    _sequence_ringbuffer_write(seq, &msg);
+        struct _sequence_ctrl_msg msg;
+        msg.param = SEQUENCE_TRANSPOSE;
+        msg.vi = transpose;
+
+        _sequence_ringbuffer_write(seq, &msg);
+
+    } else {
+
+        _sequence_set_transpose_now(seq, transpose);
+
+    }
+
+}
+
+void _sequence_set_transpose_now(struct sq_sequence_data *seq, int transpose) {
+
+    /* this function should only be called from within the audio callback */
+
+    seq->transpose = transpose;
 
 }
 
@@ -177,11 +251,26 @@ void sq_sequence_set_playhead(struct sq_sequence_data *seq, int ph) {
         return;
     }
 
-    struct _sequence_ctrl_msg msg;
-    msg.param = SEQUENCE_PH;
-    msg.vi = ph;
+    if (seq->is_playing) {
 
-    _sequence_ringbuffer_write(seq, &msg);
+        struct _sequence_ctrl_msg msg;
+        msg.param = SEQUENCE_PH;
+        msg.vi = ph;
+
+        _sequence_ringbuffer_write(seq, &msg);
+
+    } else {
+
+        _sequence_set_playhead_now(seq, ph);
+
+    }
 
 }
 
+void _sequence_set_playhead_now(struct sq_sequence_data *seq, int ph) {
+
+    /* this function should only be called from within the audio callback */
+
+    seq->ph = ph;
+
+}

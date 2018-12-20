@@ -9,7 +9,7 @@
 
 typedef jack_midi_data_t midi_packet[3]; // equivalent to 3 unsigned chars
 
-enum _sequence_param {SEQUENCE_TRANSPOSE, SEQUENCE_PH};
+enum _sequence_param {SEQUENCE_SET_TRIG, SEQUENCE_CLEAR_TRIG, SEQUENCE_TRANSPOSE, SEQUENCE_PH};
 
 struct _sequence_ctrl_msg {
 
@@ -25,7 +25,7 @@ struct _sequence_ctrl_msg {
 
 struct sq_sequence_data {
 
-    // these are accessible (indirectly) from the UI thread
+    // these are touched by both the audio and the UI thread
     char name[MAX_NAME_LENGTH + 1];
     int transpose;
     struct sq_trigger_data *trigs;
@@ -33,6 +33,9 @@ struct sq_sequence_data {
     int ph;
     midi_packet *buf_off;
     int ridx_off;
+
+    // this is only touched by UI
+    bool is_playing;
 
     int nsteps;
     int tps;
@@ -43,11 +46,20 @@ struct sq_sequence_data {
 };
 
 void sq_sequence_init(struct sq_sequence_data*, int, int);
-void sq_sequence_set_name(struct sq_sequence_data*, const char*);
-void sq_sequence_set_trig(struct sq_sequence_data*, int, struct sq_trigger_data*);
-void sq_sequence_clear_trig(struct sq_sequence_data*, int);
 void sq_sequence_tick(struct sq_sequence_data*, void*, jack_nframes_t);
+
+void sq_sequence_set_name(struct sq_sequence_data*, const char*);
+
+void sq_sequence_set_trig(struct sq_sequence_data*, int, struct sq_trigger_data*);
+void _sequence_set_trig_now(struct sq_sequence_data*, int, struct sq_trigger_data*);
+
+void sq_sequence_clear_trig(struct sq_sequence_data*, int);
+void _sequence_clear_trig_now(struct sq_sequence_data*, int);
+
 void sq_sequence_set_transpose(struct sq_sequence_data*, int);
+void _sequence_set_transpose_now(struct sq_sequence_data*, int);
+
 void sq_sequence_set_playhead(struct sq_sequence_data*, int);
+void _sequence_set_playhead_now(struct sq_sequence_data*, int);
 
 #endif

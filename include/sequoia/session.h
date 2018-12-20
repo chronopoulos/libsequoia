@@ -31,23 +31,25 @@ struct _session_ctrl_msg {
 
 struct sq_session_data {
 
-    // these things are accessible from the UI thread
+    // both audio and UI thread
     float bpm; // beats per minute
     bool go;
     struct sq_sequence_data *seqs[MAX_NSEQ];
     int nseqs;
 
+    // UI only
+    bool is_playing;
+
+    // constant
     int tps; // ticks per step
     int fpt; // frames per tick
-
     jack_client_t *jack_client;
     jack_port_t *jack_port_out;
     jack_nframes_t sr; // sample rate
     jack_nframes_t bs; // buffer size
-
-
     jack_ringbuffer_t *rb;
 
+    // audio only
     jack_nframes_t frame;
 
 };
@@ -55,8 +57,14 @@ struct sq_session_data {
 void sq_session_init(struct sq_session_data*, char*, int);
 void sq_session_start(struct sq_session_data*);
 void sq_session_stop(struct sq_session_data*);
+
 void sq_session_set_bpm(struct sq_session_data*, float);
+void _session_set_bpm_now(struct sq_session_data*, float);
+
 void sq_session_add_sequence(struct sq_session_data*, struct sq_sequence_data*);
+void _session_add_sequence_now(struct sq_session_data*, struct sq_sequence_data*);
+
 void sq_session_rm_sequence(struct sq_session_data*, struct sq_sequence_data*);
+void _session_rm_sequence_now(struct sq_session_data*, struct sq_sequence_data*);
 
 #endif
