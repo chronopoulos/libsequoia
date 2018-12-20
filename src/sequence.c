@@ -42,7 +42,7 @@ void _sequence_serve_ctrl_msgs(struct sq_sequence_data *seq) {
 
         if (msg.param == SEQUENCE_TRANSPOSE) {
             seq->transpose = msg.vi;
-        } else if (msg.param == SEQUENCE_TICK) {
+        } else if (msg.param == SEQUENCE_PH) {
             seq->ph = msg.vi;
         }
 
@@ -170,16 +170,16 @@ void sq_sequence_set_transpose(struct sq_sequence_data *seq, int transpose) {
 
 }
 
-void sq_sequence_set_tick(struct sq_sequence_data *seq, int tick) {
+void sq_sequence_set_playhead(struct sq_sequence_data *seq, int ph) {
 
-    if ( (tick < 0) || (tick >= seq->nticks) ) {
-        fprintf(stderr, "tick value out of range: %d\n", tick);
+    if ( (ph < 0) || (ph >= seq->nticks) ) {
+        fprintf(stderr, "playhead value out of range: %d\n", ph);
         return;
     }
 
     struct _sequence_ctrl_msg msg;
-    msg.param = SEQUENCE_TICK;
-    msg.vi = tick;
+    msg.param = SEQUENCE_PH;
+    msg.vi = ph;
 
     _sequence_ringbuffer_write(seq, &msg);
 

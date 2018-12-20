@@ -9,7 +9,7 @@
 
 typedef jack_midi_data_t midi_packet[3]; // equivalent to 3 unsigned chars
 
-enum _sequence_param {SEQUENCE_TRANSPOSE, SEQUENCE_TICK};
+enum _sequence_param {SEQUENCE_TRANSPOSE, SEQUENCE_PH};
 
 struct _sequence_ctrl_msg {
 
@@ -48,6 +48,6 @@ void sq_sequence_set_trig(struct sq_sequence_data*, int, struct sq_trigger_data*
 void sq_sequence_clear_trig(struct sq_sequence_data*, int);
 void sq_sequence_tick(struct sq_sequence_data*, void*, jack_nframes_t);
 void sq_sequence_set_transpose(struct sq_sequence_data*, int);
-void sq_sequence_set_tick(struct sq_sequence_data*, int);
+void sq_sequence_set_playhead(struct sq_sequence_data*, int);
 
 #endif
