@@ -233,6 +233,11 @@ void sq_session_add_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
         return;
     }
 
+    if (seq->outport == NULL) {
+        fprintf(stderr, "cannot add sequence with NULL outport\n");
+        return;
+    }
+
     if (sesh->is_playing) {
 
         _session_ctrl_msg_t msg;
