@@ -8,7 +8,7 @@
 
 // <helper>
 
-int _get_tick_index_trig(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig) {
+int _get_tick_index_trig(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
 
     // TODO: trig = seq->trigs + step_index ?
 
@@ -20,25 +20,25 @@ int _get_tick_index_trig(struct sq_sequence_data *seq, int step_index, struct sq
 
 }
 
-void _sequence_ringbuffer_write(struct sq_sequence_data *seq, struct _sequence_ctrl_msg *msg) {
+void _sequence_ringbuffer_write(sq_sequence_t *seq, _sequence_ctrl_msg_t *msg) {
 
     int avail = jack_ringbuffer_write_space(seq->rb);
-    if (avail < sizeof(struct _sequence_ctrl_msg)) {
+    if (avail < sizeof(_sequence_ctrl_msg_t)) {
         fprintf(stderr, "sequence ringbuffer: overflow\n");
         return;
     }
 
-    jack_ringbuffer_write(seq->rb, (const char*) msg, sizeof(struct _sequence_ctrl_msg));
+    jack_ringbuffer_write(seq->rb, (const char*) msg, sizeof(_sequence_ctrl_msg_t));
 
 }
 
-void _sequence_serve_ctrl_msgs(struct sq_sequence_data *seq) {
+void _sequence_serve_ctrl_msgs(sq_sequence_t *seq) {
 
     int avail = jack_ringbuffer_read_space(seq->rb);
-    struct _sequence_ctrl_msg msg;
-    while(avail >= sizeof(struct _sequence_ctrl_msg)) {
+    _sequence_ctrl_msg_t msg;
+    while(avail >= sizeof(_sequence_ctrl_msg_t)) {
 
-        jack_ringbuffer_read(seq->rb, (char*) &msg, sizeof(struct _sequence_ctrl_msg));
+        jack_ringbuffer_read(seq->rb, (char*) &msg, sizeof(_sequence_ctrl_msg_t));
 
         if (msg.param == SEQUENCE_SET_TRIG) {
             _sequence_set_trig_now(seq, msg.vi, msg.vp);
@@ -50,7 +50,7 @@ void _sequence_serve_ctrl_msgs(struct sq_sequence_data *seq) {
             _sequence_set_playhead_now(seq, msg.vi);
         }
 
-        avail -= sizeof(struct _sequence_ctrl_msg);
+        avail -= sizeof(_sequence_ctrl_msg_t);
 
     }
 
@@ -58,21 +58,21 @@ void _sequence_serve_ctrl_msgs(struct sq_sequence_data *seq) {
 
 // </helper>
 
-void sq_sequence_init(struct sq_sequence_data *seq, int nsteps, int tps) {
+void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
 
     seq->nsteps = nsteps;
     seq->tps = tps;
     seq->name[0] = '\0';
     seq->transpose = 0;
 
-    seq->trigs = malloc(seq->nsteps * sizeof(struct sq_trigger_data));
+    seq->trigs = malloc(seq->nsteps * sizeof(sq_trigger_t));
     for (int i=0; i<seq->nsteps; i++) {
         sq_trigger_init(seq->trigs + i);
     }
 
     seq->nticks = seq->nsteps * seq->tps;
 
-    seq->microgrid = malloc(seq->nticks * sizeof(struct sq_trigger_data*));
+    seq->microgrid = malloc(seq->nticks * sizeof(sq_trigger_t*));
     for(int i=0; i<seq->nticks; i++) {
         seq->microgrid[i] = NULL;
     }
@@ -85,7 +85,7 @@ void sq_sequence_init(struct sq_sequence_data *seq, int nsteps, int tps) {
     seq->ridx_off = 0;
 
     // allocate and lock ringbuffer (universal ringbuffer length?)
-    seq->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(struct _sequence_ctrl_msg));
+    seq->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(_sequence_ctrl_msg_t));
     int err = jack_ringbuffer_mlock(seq->rb);
     if (err) {
         fprintf(stderr, "failed to lock ringbuffer\n");
@@ -99,7 +99,7 @@ void sq_sequence_init(struct sq_sequence_data *seq, int nsteps, int tps) {
 
 }
 
-void _sequence_prepare_outport(struct sq_sequence_data *seq, jack_nframes_t nframes) {
+void _sequence_prepare_outport(sq_sequence_t *seq, jack_nframes_t nframes) {
 
     /* this should be called once per sequence at the start of a processing callback */
 
@@ -108,7 +108,7 @@ void _sequence_prepare_outport(struct sq_sequence_data *seq, jack_nframes_t nfra
 
 }
 
-void _sequence_tick(struct sq_sequence_data *seq, jack_nframes_t idx) {
+void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
 
     /* this should called once per sequence, every time the session frame
         counter crosses a tick boundary */
@@ -118,7 +118,7 @@ void _sequence_tick(struct sq_sequence_data *seq, jack_nframes_t idx) {
     unsigned char *midi_msg_write_ptr;
 
     // handle any triggers from the microgrid
-    struct sq_trigger_data *trig;
+    sq_trigger_t *trig;
     int widx_off;
     if ((trig = seq->microgrid[seq->ph])) { // if non-NULL
         midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
@@ -155,20 +155,20 @@ void _sequence_tick(struct sq_sequence_data *seq, jack_nframes_t idx) {
 
 }
 
-void sq_sequence_set_name(struct sq_sequence_data *seq, const char *name) {
+void sq_sequence_set_name(sq_sequence_t *seq, const char *name) {
 
     // this parameter is safe to touch directly (for now)
     strcpy(seq->name, name);
 
 }
 
-void sq_sequence_set_outport(struct sq_sequence_data *seq, jack_port_t *port) {
+void sq_sequence_set_outport(sq_sequence_t *seq, jack_port_t *port) {
 
     seq->outport = port;
 
 }
 
-void sq_sequence_set_trig(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig) {
+void sq_sequence_set_trig(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
 
     if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
         fprintf(stderr, "step index %d out of range\n", step_index);
@@ -177,7 +177,7 @@ void sq_sequence_set_trig(struct sq_sequence_data *seq, int step_index, struct s
 
     if (seq->is_playing) {
 
-        struct _sequence_ctrl_msg msg;
+        _sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_SET_TRIG;
         msg.vi = step_index;
         msg.vp = trig;
@@ -192,11 +192,11 @@ void sq_sequence_set_trig(struct sq_sequence_data *seq, int step_index, struct s
 
 }
 
-void _sequence_set_trig_now(struct sq_sequence_data *seq, int step_index, struct sq_trigger_data *trig) {
+void _sequence_set_trig_now(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
 
     /* this function should only be called from within the audio callback */
 
-    memcpy(seq->trigs + step_index, trig, sizeof(struct sq_trigger_data));
+    memcpy(seq->trigs + step_index, trig, sizeof(sq_trigger_t));
     int tick_index;
     if (trig->type == TRIG_NOTE) {
         tick_index = _get_tick_index_trig(seq, step_index, trig);
@@ -206,7 +206,7 @@ void _sequence_set_trig_now(struct sq_sequence_data *seq, int step_index, struct
 }
 
 
-void sq_sequence_clear_trig(struct sq_sequence_data *seq, int step_index) {
+void sq_sequence_clear_trig(sq_sequence_t *seq, int step_index) {
 
     if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
         fprintf(stderr, "step index %d out of range\n", step_index);
@@ -215,7 +215,7 @@ void sq_sequence_clear_trig(struct sq_sequence_data *seq, int step_index) {
 
     if (seq->is_playing) {
 
-        struct _sequence_ctrl_msg msg;
+        _sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_SET_TRIG;
         msg.vi = step_index;
 
@@ -229,21 +229,21 @@ void sq_sequence_clear_trig(struct sq_sequence_data *seq, int step_index) {
 
 }
 
-void _sequence_clear_trig_now(struct sq_sequence_data *seq, int step_index) {
+void _sequence_clear_trig_now(sq_sequence_t *seq, int step_index) {
 
     /* this function should only be called from within the audio callback */
 
-    struct sq_trigger_data *trig = seq->trigs + step_index;
+    sq_trigger_t *trig = seq->trigs + step_index;
     seq->microgrid[_get_tick_index_trig(seq, step_index, trig)] = NULL;
     trig->type = TRIG_NULL;
 
 }
 
-void sq_sequence_set_transpose(struct sq_sequence_data *seq, int transpose) {
+void sq_sequence_set_transpose(sq_sequence_t *seq, int transpose) {
 
     if (seq->is_playing) {
 
-        struct _sequence_ctrl_msg msg;
+        _sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_TRANSPOSE;
         msg.vi = transpose;
 
@@ -257,7 +257,7 @@ void sq_sequence_set_transpose(struct sq_sequence_data *seq, int transpose) {
 
 }
 
-void _sequence_set_transpose_now(struct sq_sequence_data *seq, int transpose) {
+void _sequence_set_transpose_now(sq_sequence_t *seq, int transpose) {
 
     /* this function should only be called from within the audio callback */
 
@@ -265,7 +265,7 @@ void _sequence_set_transpose_now(struct sq_sequence_data *seq, int transpose) {
 
 }
 
-void sq_sequence_set_playhead(struct sq_sequence_data *seq, int ph) {
+void sq_sequence_set_playhead(sq_sequence_t *seq, int ph) {
 
     if ( (ph < 0) || (ph >= seq->nticks) ) {
         fprintf(stderr, "playhead value out of range: %d\n", ph);
@@ -274,7 +274,7 @@ void sq_sequence_set_playhead(struct sq_sequence_data *seq, int ph) {
 
     if (seq->is_playing) {
 
-        struct _sequence_ctrl_msg msg;
+        _sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_PH;
         msg.vi = ph;
 
@@ -288,7 +288,7 @@ void sq_sequence_set_playhead(struct sq_sequence_data *seq, int ph) {
 
 }
 
-void _sequence_set_playhead_now(struct sq_sequence_data *seq, int ph) {
+void _sequence_set_playhead_now(sq_sequence_t *seq, int ph) {
 
     /* this function should only be called from within the audio callback */
 

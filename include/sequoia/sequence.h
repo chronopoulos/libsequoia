@@ -5,13 +5,15 @@
 #include <jack/midiport.h>
 #include <jack/ringbuffer.h>
 
+#include "trigger.h"
+
 #define MAX_NAME_LENGTH 255
 
 typedef jack_midi_data_t midi_packet[3]; // equivalent to 3 unsigned chars
 
 enum _sequence_param {SEQUENCE_SET_TRIG, SEQUENCE_CLEAR_TRIG, SEQUENCE_TRANSPOSE, SEQUENCE_PH};
 
-struct _sequence_ctrl_msg {
+typedef struct {
 
     enum _sequence_param param;
 
@@ -19,17 +21,17 @@ struct _sequence_ctrl_msg {
     int vi;
     float vf;
     bool vb;
-    struct sq_trigger_data *vp;
+    sq_trigger_t *vp;
 
-};
+} _sequence_ctrl_msg_t;
 
-struct sq_sequence_data {
+typedef struct {
 
     // these are touched by both the audio and the UI thread
     char name[MAX_NAME_LENGTH + 1];
     int transpose;
-    struct sq_trigger_data *trigs;
-    struct sq_trigger_data **microgrid;
+    sq_trigger_t *trigs;
+    sq_trigger_t **microgrid;
     int ph;
     midi_packet *buf_off;
     int ridx_off;
@@ -47,26 +49,26 @@ struct sq_sequence_data {
 
     jack_ringbuffer_t *rb;
 
-};
+} sq_sequence_t;
 
-void sq_sequence_init(struct sq_sequence_data*, int, int);
+void sq_sequence_init(sq_sequence_t*, int, int);
 
-void _sequence_prepare_outport(struct sq_sequence_data*, jack_nframes_t);
-void _sequence_tick(struct sq_sequence_data*, jack_nframes_t);
+void _sequence_prepare_outport(sq_sequence_t*, jack_nframes_t);
+void _sequence_tick(sq_sequence_t*, jack_nframes_t);
 
-void sq_sequence_set_name(struct sq_sequence_data*, const char*);
-void sq_sequence_set_outport(struct sq_sequence_data*, jack_port_t*);
+void sq_sequence_set_name(sq_sequence_t*, const char*);
+void sq_sequence_set_outport(sq_sequence_t*, jack_port_t*);
 
-void sq_sequence_set_trig(struct sq_sequence_data*, int, struct sq_trigger_data*);
-void _sequence_set_trig_now(struct sq_sequence_data*, int, struct sq_trigger_data*);
+void sq_sequence_set_trig(sq_sequence_t*, int, sq_trigger_t*);
+void _sequence_set_trig_now(sq_sequence_t*, int, sq_trigger_t*);
 
-void sq_sequence_clear_trig(struct sq_sequence_data*, int);
-void _sequence_clear_trig_now(struct sq_sequence_data*, int);
+void sq_sequence_clear_trig(sq_sequence_t*, int);
+void _sequence_clear_trig_now(sq_sequence_t*, int);
 
-void sq_sequence_set_transpose(struct sq_sequence_data*, int);
-void _sequence_set_transpose_now(struct sq_sequence_data*, int);
+void sq_sequence_set_transpose(sq_sequence_t*, int);
+void _sequence_set_transpose_now(sq_sequence_t*, int);
 
-void sq_sequence_set_playhead(struct sq_sequence_data*, int);
-void _sequence_set_playhead_now(struct sq_sequence_data*, int);
+void sq_sequence_set_playhead(sq_sequence_t*, int);
+void _sequence_set_playhead_now(sq_sequence_t*, int);
 
 #endif

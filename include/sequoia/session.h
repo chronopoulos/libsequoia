@@ -18,7 +18,7 @@
 
 enum _session_param {SESSION_GO, SESSION_BPM, SESSION_ADD_SEQ, SESSION_RM_SEQ};
 
-struct _session_ctrl_msg {
+typedef struct {
 
     enum _session_param param;
 
@@ -26,16 +26,16 @@ struct _session_ctrl_msg {
     int vi;
     float vf;
     bool vb;
-    struct sq_sequence_data *vp;
+    sq_sequence_t *vp;
 
-};
+} _session_ctrl_msg_t ;
 
-struct sq_session_data {
+typedef struct {
 
     // both audio and UI thread
     float bpm; // beats per minute
     bool go;
-    struct sq_sequence_data *seqs[MAX_NSEQ];
+    sq_sequence_t *seqs[MAX_NSEQ];
     int nseqs;
 
     // UI only
@@ -52,20 +52,20 @@ struct sq_session_data {
     // audio only
     jack_nframes_t frame;
 
-};
+} sq_session_t;
 
-void sq_session_init(struct sq_session_data*, const char*, int);
-jack_port_t *sq_session_create_outport(struct sq_session_data *, const char*);
-void sq_session_start(struct sq_session_data*);
-void sq_session_stop(struct sq_session_data*);
+void sq_session_init(sq_session_t*, const char*, int);
+jack_port_t *sq_session_create_outport(sq_session_t *, const char*);
+void sq_session_start(sq_session_t*);
+void sq_session_stop(sq_session_t*);
 
-void sq_session_set_bpm(struct sq_session_data*, float);
-void _session_set_bpm_now(struct sq_session_data*, float);
+void sq_session_set_bpm(sq_session_t*, float);
+void _session_set_bpm_now(sq_session_t*, float);
 
-void sq_session_add_sequence(struct sq_session_data*, struct sq_sequence_data*);
-void _session_add_sequence_now(struct sq_session_data*, struct sq_sequence_data*);
+void sq_session_add_sequence(sq_session_t*, sq_sequence_t*);
+void _session_add_sequence_now(sq_session_t*, sq_sequence_t*);
 
-void sq_session_rm_sequence(struct sq_session_data*, struct sq_sequence_data*);
-void _session_rm_sequence_now(struct sq_session_data*, struct sq_sequence_data*);
+void sq_session_rm_sequence(sq_session_t*, sq_sequence_t*);
+void _session_rm_sequence_now(sq_session_t*, sq_sequence_t*);
 
 #endif

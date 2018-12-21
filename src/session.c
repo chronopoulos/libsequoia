@@ -11,25 +11,25 @@ inline jack_nframes_t _min_nframes(jack_nframes_t a, jack_nframes_t b ) {
 
 }
 
-void _session_ringbuffer_write(struct sq_session_data *sesh, struct _session_ctrl_msg *msg) {
+void _session_ringbuffer_write(sq_session_t *sesh, _session_ctrl_msg_t *msg) {
 
     int avail = jack_ringbuffer_write_space(sesh->rb);
-    if (avail < sizeof(struct _session_ctrl_msg)) {
+    if (avail < sizeof(_session_ctrl_msg_t)) {
         fprintf(stderr, "session ringbuffer: overflow\n");
         return;
     }
 
-    jack_ringbuffer_write(sesh->rb, (const char*) msg, sizeof(struct _session_ctrl_msg));
+    jack_ringbuffer_write(sesh->rb, (const char*) msg, sizeof(_session_ctrl_msg_t));
 
 }
 
-void _session_serve_ctrl_msgs(struct sq_session_data *sesh) {
+void _session_serve_ctrl_msgs(sq_session_t *sesh) {
 
     int avail = jack_ringbuffer_read_space(sesh->rb);
-    struct _session_ctrl_msg msg;
-    while(avail >= sizeof(struct _session_ctrl_msg)) {
+    _session_ctrl_msg_t msg;
+    while(avail >= sizeof(_session_ctrl_msg_t)) {
 
-        jack_ringbuffer_read(sesh->rb, (char*) &msg, sizeof(struct _session_ctrl_msg));
+        jack_ringbuffer_read(sesh->rb, (char*) &msg, sizeof(_session_ctrl_msg_t));
 
         if (msg.param == SESSION_GO) {
 
@@ -49,7 +49,7 @@ void _session_serve_ctrl_msgs(struct sq_session_data *sesh) {
 
         }
 
-        avail -= sizeof(struct _session_ctrl_msg);
+        avail -= sizeof(_session_ctrl_msg_t);
 
     }
 
@@ -59,7 +59,7 @@ void _session_serve_ctrl_msgs(struct sq_session_data *sesh) {
 
 static int _process(jack_nframes_t nframes, void *arg) {
 
-    struct sq_session_data *sesh = (struct sq_session_data*) arg;
+    sq_session_t *sesh = (sq_session_t*) arg;
 
     _session_serve_ctrl_msgs(sesh);
 
@@ -97,7 +97,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 }
 
-void sq_session_init(struct sq_session_data *sesh, const char *client_name, int tps) {
+void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
 
     // initialize struct members
     sesh->go = false;
@@ -122,7 +122,7 @@ void sq_session_init(struct sq_session_data *sesh, const char *client_name, int 
 	jack_set_process_callback(sesh->jack_client, _process, sesh);
 
     // allocate and lock ringbuffer
-    sesh->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(struct _session_ctrl_msg));
+    sesh->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(_session_ctrl_msg_t));
     int err = jack_ringbuffer_mlock(sesh->rb);
     if (err) {
         fprintf(stderr, "failed to lock ringbuffer\n");
@@ -139,7 +139,7 @@ void sq_session_init(struct sq_session_data *sesh, const char *client_name, int 
 
 }
 
-jack_port_t *sq_session_create_outport(struct sq_session_data *sesh, const char *name) {
+jack_port_t *sq_session_create_outport(sq_session_t *sesh, const char *name) {
 
     jack_port_t *port;
 
@@ -154,14 +154,14 @@ jack_port_t *sq_session_create_outport(struct sq_session_data *sesh, const char 
 
 }
 
-void sq_session_start(struct sq_session_data *sesh) {
+void sq_session_start(sq_session_t *sesh) {
 
     sesh->is_playing = true;
     for (int i=0; i<sesh->nseqs; i++) {
         sesh->seqs[i]->is_playing = true;
     }
 
-    struct _session_ctrl_msg msg;
+    _session_ctrl_msg_t msg;
     msg.param = SESSION_GO;
     msg.vb = true;
 
@@ -169,14 +169,14 @@ void sq_session_start(struct sq_session_data *sesh) {
 
 }
 
-void sq_session_stop(struct sq_session_data *sesh) {
+void sq_session_stop(sq_session_t *sesh) {
 
     sesh->is_playing = false;
     for (int i=0; i<sesh->nseqs; i++) {
         sesh->seqs[i]->is_playing = false;
     }
 
-    struct _session_ctrl_msg msg;
+    _session_ctrl_msg_t msg;
     msg.param = SESSION_GO;
     msg.vb = false;
 
@@ -188,11 +188,11 @@ void sq_session_stop(struct sq_session_data *sesh) {
 
 }
 
-void sq_session_set_bpm(struct sq_session_data *sesh, float bpm) {
+void sq_session_set_bpm(sq_session_t *sesh, float bpm) {
 
     if (sesh->is_playing) {
 
-        struct _session_ctrl_msg msg;
+        _session_ctrl_msg_t msg;
         msg.param = SESSION_BPM;
         msg.vf = bpm;
 
@@ -206,7 +206,7 @@ void sq_session_set_bpm(struct sq_session_data *sesh, float bpm) {
 
 }
 
-void _session_set_bpm_now(struct sq_session_data *sesh, float bpm) {
+void _session_set_bpm_now(sq_session_t *sesh, float bpm) {
 
     sesh->bpm = bpm;
 
@@ -226,7 +226,7 @@ void _session_set_bpm_now(struct sq_session_data *sesh, float bpm) {
 
 }
 
-void sq_session_add_sequence(struct sq_session_data *sesh, struct sq_sequence_data *seq) {
+void sq_session_add_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
 
     if (seq->tps != sesh->tps) {
         fprintf(stderr, "seq->tps doesn't match sesh->tps: %d vs %d\n", seq->tps, sesh->tps);
@@ -235,7 +235,7 @@ void sq_session_add_sequence(struct sq_session_data *sesh, struct sq_sequence_da
 
     if (sesh->is_playing) {
 
-        struct _session_ctrl_msg msg;
+        _session_ctrl_msg_t msg;
         msg.param = SESSION_ADD_SEQ;
         msg.vp = seq;
 
@@ -249,21 +249,21 @@ void sq_session_add_sequence(struct sq_session_data *sesh, struct sq_sequence_da
 
 }
 
-void _session_add_sequence_now(struct sq_session_data *sesh, struct sq_sequence_data *seq) {
+void _session_add_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
 
     sesh->seqs[sesh->nseqs] = seq;
     sesh->nseqs++;
 
 }
 
-void sq_session_rm_sequence(struct sq_session_data *sesh, struct sq_sequence_data *seq) {
+void sq_session_rm_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
 
     // NOTE: this does not free the memory pointed to by seq;
     //  the caller must do that explicitly
 
     if (sesh->is_playing) {
 
-        struct _session_ctrl_msg msg;
+        _session_ctrl_msg_t msg;
         msg.param = SESSION_RM_SEQ;
         msg.vp = seq;
 
@@ -277,7 +277,7 @@ void sq_session_rm_sequence(struct sq_session_data *sesh, struct sq_sequence_dat
 
 }
 
-void _session_rm_sequence_now(struct sq_session_data *sesh, struct sq_sequence_data *seq) {
+void _session_rm_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
 
     int i;
 
