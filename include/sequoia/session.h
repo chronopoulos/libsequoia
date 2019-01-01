@@ -89,4 +89,6 @@ void _session_add_sequence_now(sq_session_t*, sq_sequence_t*);
 void sq_session_rm_sequence(sq_session_t*, sq_sequence_t*);
 void _session_rm_sequence_now(sq_session_t*, sq_sequence_t*);
 
+char *sq_session_get_name(sq_session_t*);
+
 #endif

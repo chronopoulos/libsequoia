@@ -128,6 +128,7 @@ void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
 
     // open jack client
     sesh->jack_client = jack_client_open(client_name, JackNullOption, NULL);
+    
 	if (sesh->jack_client == 0) {
         fprintf(stderr, "JACK server not running?\n");
         exit(1);
@@ -322,3 +323,8 @@ void _session_rm_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
 
 }
 
+char *sq_session_get_name(sq_session_t *sesh) {
+
+    return jack_get_client_name(sesh->jack_client);
+
+}
