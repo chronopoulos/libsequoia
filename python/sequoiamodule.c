@@ -23,6 +23,10 @@ static PyObject *initsequoia_worker(void) {
         return m;
     }
 
+    if (PyType_Ready(&Py_triggerType) < 0) {
+        return m;
+    }
+
 #if PY_MAJOR_VERSION >= 3
     m = PyModule_Create(&moduledef);
 #else
@@ -30,7 +34,11 @@ static PyObject *initsequoia_worker(void) {
 #endif
 
     Py_INCREF (&Py_sessionType);
-    PyModule_AddObject (m, "session", (PyObject *) & Py_sessionType);
+    PyModule_AddObject (m, "session", (PyObject *) &Py_sessionType);
+
+    Py_INCREF (&Py_triggerType);
+    PyModule_AddObject (m, "trigger", (PyObject *) &Py_triggerType);
+
     return m;
 
 }
