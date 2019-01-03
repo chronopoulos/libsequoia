@@ -92,6 +92,34 @@ static PyObject *Py_session_create_outport(Py_session *self, PyObject *args) {
 
 }
 
+static PyObject *Py_session_add_sequence(Py_session *self, PyObject *args) {
+
+    PyObject *object;
+
+    if (!PyArg_ParseTuple(args, "O", &object)) {
+        return NULL;
+    }
+
+    sq_session_add_sequence(&self->sesh, &((Py_sequence*)object)->seq);
+
+    Py_RETURN_NONE;
+
+}
+
+static PyObject *Py_session_rm_sequence(Py_session *self, PyObject *args) {
+
+    PyObject *object;
+
+    if (!PyArg_ParseTuple(args, "O", &object)) {
+        return NULL;
+    }
+
+    sq_session_rm_sequence(&self->sesh, &((Py_sequence*)object)->seq);
+
+    Py_RETURN_NONE;
+
+}
+
 static PyMethodDef Py_session_methods[] = {
 
     {"set_bpm", (PyCFunction) Py_session_set_bpm, METH_VARARGS, NULL},
@@ -99,6 +127,8 @@ static PyMethodDef Py_session_methods[] = {
     {"stop", (PyCFunction) Py_session_stop, METH_NOARGS, NULL},
     {"get_name", (PyCFunction) Py_session_get_name, METH_NOARGS, NULL},
     {"create_outport", (PyCFunction) Py_session_create_outport, METH_VARARGS, NULL},
+    {"add_sequence", (PyCFunction) Py_session_add_sequence, METH_VARARGS, NULL},
+    {"rm_sequence", (PyCFunction) Py_session_rm_sequence, METH_VARARGS, NULL},
     {NULL}
 
 };

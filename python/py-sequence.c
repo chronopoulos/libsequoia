@@ -88,7 +88,7 @@ static PyObject *Py_sequence_set_trig(Py_sequence *self, PyObject *args) {
         return NULL;
     }
 
-    //sq_sequence_set_trig(&self->seq, stepIndex, &((Py_trigger*)object)->trig);
+    sq_sequence_set_trig(&self->seq, stepIndex, &((Py_trigger*)object)->trig);
 
     Py_RETURN_NONE;
 
