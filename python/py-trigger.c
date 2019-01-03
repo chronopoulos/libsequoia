@@ -1,15 +1,5 @@
 #include "sequoia-types.h"
 
-#include <sequoia.h>
-
-typedef struct {
-
-    PyObject_HEAD
-
-    sq_trigger_t trig;
-
-} Py_trigger;
-
 static int Py_trigger_init(Py_trigger *self, PyObject *args, PyObject *kwds) {
 
     sq_trigger_init(&self->trig);

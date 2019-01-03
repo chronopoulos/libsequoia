@@ -23,6 +23,10 @@ static PyObject *initsequoia_worker(void) {
         return m;
     }
 
+    if (PyType_Ready(&Py_sequenceType) < 0) {
+        return m;
+    }
+
     if (PyType_Ready(&Py_triggerType) < 0) {
         return m;
     }
@@ -36,7 +40,10 @@ static PyObject *initsequoia_worker(void) {
     Py_INCREF (&Py_sessionType);
     PyModule_AddObject (m, "session", (PyObject *) &Py_sessionType);
 
-    Py_INCREF (&Py_triggerType);
+    Py_INCREF (&Py_sequenceType);
+    PyModule_AddObject (m, "sequence", (PyObject *) &Py_sequenceType);
+
+    Py_INCREF (&Py_sequenceType);
     PyModule_AddObject (m, "trigger", (PyObject *) &Py_triggerType);
 
     return m;

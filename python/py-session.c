@@ -1,15 +1,5 @@
 #include "sequoia-types.h"
 
-#include <sequoia.h>
-
-typedef struct {
-
-    PyObject_HEAD
-
-    sq_session_t sesh;
-
-} Py_session;
-
 static int Py_session_init(Py_session *self, PyObject *args, PyObject *kwds) {
 
     char *name;
@@ -90,14 +80,15 @@ static PyObject *Py_session_get_name(Py_session *self, PyObject *unused) {
 static PyObject *Py_session_create_outport(Py_session *self, PyObject *args) {
 
     char *name;
+    jack_port_t *outport;
 
     if (!PyArg_ParseTuple(args, "s", &name)) {
         return NULL;
     }
 
-    sq_session_create_outport(&self->sesh, name);
+    outport = sq_session_create_outport(&self->sesh, name);
 
-    Py_RETURN_NONE;
+    return PyCObject_FromVoidPtr((void*) outport, NULL);
 
 }
 
