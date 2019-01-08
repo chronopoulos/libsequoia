@@ -92,4 +92,6 @@ void _sequence_set_transpose_now(sq_sequence_t*, int);
 void sq_sequence_set_playhead(sq_sequence_t*, int);
 void _sequence_set_playhead_now(sq_sequence_t*, int);
 
+void sq_sequence_pprint(sq_sequence_t*);
+
 #endif

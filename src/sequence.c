@@ -316,3 +316,51 @@ void _sequence_set_playhead_now(sq_sequence_t *seq, int ph) {
     seq->ph = ph;
 
 }
+
+void sq_sequence_pprint(sq_sequence_t *seq) {
+
+    if (seq->is_playing) {
+
+        printf("Cannot print sequence while playing.\nTry stopping the session first.\n");
+
+    } else {
+
+        int charCount = 0;
+        bool newLineLast = false;
+
+        for (int step = 0; step < seq->nsteps; step++) {
+
+            if (charCount == 0) {
+                printf("|");
+                charCount += 1;
+            }
+
+            if (seq->trigs[step].type == TRIG_NULL) {
+                printf("....|");
+                charCount += 5;
+                newLineLast = false;
+            } else if (seq->trigs[step].type == TRIG_NOTE) {
+                printf("N%03d|", seq->trigs[step].note);
+                charCount += 5;
+                newLineLast = false;
+            } else if (seq->trigs[step].type == TRIG_CC) {
+                printf("C%03d|", seq->trigs[step].cc_value);
+                charCount += 5;
+                newLineLast = false;
+            }
+
+            if (charCount == 81) {
+                printf("\n");
+                newLineLast = true;
+                charCount = 0;
+            }
+
+
+        }
+
+        if (!newLineLast) printf("\n");
+
+    }
+
+}
+
