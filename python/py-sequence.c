@@ -2,7 +2,13 @@
 
 static int Py_sequence_init(Py_sequence *self, PyObject *args, PyObject *kwds) {
 
-    sq_sequence_init(&self->seq, 16, 64);
+    int nsteps, tps;
+
+    if (!PyArg_ParseTuple(args, "ii", &nsteps, &tps)) {
+        return -1;
+    }
+
+    sq_sequence_init(&self->seq, nsteps, tps);
 
     return 0;
 
@@ -125,6 +131,14 @@ static PyObject *Py_sequence_set_outport(Py_sequence *self, PyObject *args) {
 
 }
 
+static PyObject *Py_sequence_pprint(Py_sequence *self, PyObject *args) {
+
+    sq_sequence_pprint(&self->seq);
+
+    Py_RETURN_NONE;
+
+}
+
 static PyMethodDef Py_sequence_methods[] = {
 
     {"set_name", (PyCFunction) Py_sequence_set_name, METH_VARARGS, NULL},
@@ -133,6 +147,7 @@ static PyMethodDef Py_sequence_methods[] = {
     {"set_playhead", (PyCFunction) Py_sequence_set_playhead, METH_VARARGS, NULL},
     {"set_trig", (PyCFunction) Py_sequence_set_trig, METH_VARARGS, NULL},
     {"clear_trig", (PyCFunction) Py_sequence_clear_trig, METH_VARARGS, NULL},
+    {"pprint", (PyCFunction) Py_sequence_pprint, METH_NOARGS, NULL},
     {NULL}
 
 };
