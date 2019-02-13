@@ -328,3 +328,11 @@ char *sq_session_get_name(sq_session_t *sesh) {
     return jack_get_client_name(sesh->jack_client);
 
 }
+
+// read-only getters don't need to use ringbuffers
+
+int sq_session_get_tps(sq_session_t *sesh) {
+
+    return sesh->tps;
+
+}

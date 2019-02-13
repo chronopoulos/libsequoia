@@ -120,6 +120,15 @@ static PyObject *Py_session_rm_sequence(Py_session *self, PyObject *args) {
 
 }
 
+static PyObject *Py_session_get_tps(Py_session *self, PyObject *args) {
+
+    int result;
+    result = sq_session_get_tps(&self->sesh);
+
+    return PyInt_FromLong(result);
+
+}
+
 static PyMethodDef Py_session_methods[] = {
 
     {"set_bpm", (PyCFunction) Py_session_set_bpm, METH_VARARGS, NULL},
@@ -129,6 +138,7 @@ static PyMethodDef Py_session_methods[] = {
     {"create_outport", (PyCFunction) Py_session_create_outport, METH_VARARGS, NULL},
     {"add_sequence", (PyCFunction) Py_session_add_sequence, METH_VARARGS, NULL},
     {"rm_sequence", (PyCFunction) Py_session_rm_sequence, METH_VARARGS, NULL},
+    {"get_tps", (PyCFunction) Py_session_get_tps, METH_VARARGS, NULL},
     {NULL}
 
 };
