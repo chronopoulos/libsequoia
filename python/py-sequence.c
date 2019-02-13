@@ -139,6 +139,15 @@ static PyObject *Py_sequence_pprint(Py_sequence *self, PyObject *args) {
 
 }
 
+static PyObject *Py_sequence_get_nsteps(Py_session *self, PyObject *args) {
+
+    int result;
+    result = sq_sequence_get_bpm(&self->seq);
+
+    return PyInt_FromLong(result);
+
+}
+
 static PyMethodDef Py_sequence_methods[] = {
 
     {"set_name", (PyCFunction) Py_sequence_set_name, METH_VARARGS, NULL},
@@ -148,6 +157,7 @@ static PyMethodDef Py_sequence_methods[] = {
     {"set_trig", (PyCFunction) Py_sequence_set_trig, METH_VARARGS, NULL},
     {"clear_trig", (PyCFunction) Py_sequence_clear_trig, METH_VARARGS, NULL},
     {"pprint", (PyCFunction) Py_sequence_pprint, METH_NOARGS, NULL},
+    {"get_nsteps", (PyCFunction) Py_sequence_get_nsteps, METH_NOARGS, NULL},
     {NULL}
 
 };

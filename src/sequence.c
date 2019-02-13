@@ -364,3 +364,11 @@ void sq_sequence_pprint(sq_sequence_t *seq) {
 
 }
 
+// read-only getters don't need to use ringbuffers
+
+int sq_sequence_get_nsteps(sq_sequence_t *seq) {
+
+    return seq->nsteps;
+
+}
+
