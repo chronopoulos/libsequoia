@@ -92,5 +92,6 @@ void _session_rm_sequence_now(sq_session_t*, sq_sequence_t*);
 char *sq_session_get_name(sq_session_t*);
 
 int sq_session_get_tps(sq_session_t*);
+int sq_session_get_bpm(sq_session_t*);
 
 #endif

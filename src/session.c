@@ -336,3 +336,9 @@ int sq_session_get_tps(sq_session_t *sesh) {
     return sesh->tps;
 
 }
+
+int sq_session_get_bpm(sq_session_t *sesh) {
+
+    return sesh->bpm;
+
+}
