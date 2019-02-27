@@ -126,6 +126,9 @@ void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
     sesh->nseqs = 0;
     sesh->frame = 0;
 
+    // seed random number generator with system time
+    srandom(time(NULL));
+
     // open jack client
     sesh->jack_client = jack_client_open(client_name, JackNullOption, NULL);
     

@@ -37,11 +37,14 @@ typedef struct {
     int cc_number;          // [0, 119]
     int cc_value;           // [0, 127]
 
+    float probability;      // [0,1]
+
 } sq_trigger_t;
 
 void sq_trigger_init(sq_trigger_t*);
 void sq_trigger_set_null(sq_trigger_t*);
 void sq_trigger_set_note(sq_trigger_t*, int, int, float);
 void sq_trigger_set_cc(sq_trigger_t*, int, int);
+void sq_trigger_set_probability(sq_trigger_t*, float);
 
 #endif

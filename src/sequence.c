@@ -134,27 +134,36 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
     /* this should called once per sequence, every time the session frame
         counter crosses a tick boundary */
 
-    _sequence_serve_ctrl_msgs(seq);
-
     unsigned char *midi_msg_write_ptr;
-
-    // handle any triggers from the microgrid
+    float dice;
     sq_trigger_t *trig;
     int widx_off;
+
+    // serve any control messages in the ringbuffer
+    _sequence_serve_ctrl_msgs(seq);
+
+    // handle any triggers from the microgrid
     if ((trig = seq->microgrid[seq->ph])) { // if non-NULL
-        midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
-        if (trig->type == TRIG_NOTE) {
 
-            midi_msg_write_ptr[0] = 143 + trig->channel;
-            midi_msg_write_ptr[1] = trig->note + seq->transpose;
-            midi_msg_write_ptr[2] = trig->velocity;
+        dice = ((float) random()) / RAND_MAX;
+        if (dice <= trig->probability) {
 
-            widx_off = (seq->ridx_off + (int)roundl(trig->length * seq->tps)) % seq->nticks;
-            seq->buf_off[widx_off][0] = 127 + trig->channel;
-            seq->buf_off[widx_off][1] = trig->note + seq->transpose;
-            seq->buf_off[widx_off][2] = trig->velocity;
+            midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
+            if (trig->type == TRIG_NOTE) {
+
+                midi_msg_write_ptr[0] = 143 + trig->channel;
+                midi_msg_write_ptr[1] = trig->note + seq->transpose;
+                midi_msg_write_ptr[2] = trig->velocity;
+
+                widx_off = (seq->ridx_off + (int)roundl(trig->length * seq->tps)) % seq->nticks;
+                seq->buf_off[widx_off][0] = 127 + trig->channel;
+                seq->buf_off[widx_off][1] = trig->note + seq->transpose;
+                seq->buf_off[widx_off][2] = trig->velocity;
+
+            }
 
         }
+
     }
 
     // increment ph

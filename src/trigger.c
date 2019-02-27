@@ -34,6 +34,8 @@ void sq_trigger_init(sq_trigger_t *trig) {
     trig->cc_number = 0;
     trig->cc_value = 0;
 
+    trig->probability = 1.;
+
 }
 
 void sq_trigger_set_null(sq_trigger_t *trig) {
@@ -55,5 +57,11 @@ void sq_trigger_set_cc(sq_trigger_t *trig, int cc_number, int cc_value) {
     trig->type = TRIG_CC;
     trig->cc_number = cc_number;
     trig->cc_value= cc_value;
+
+}
+
+void sq_trigger_set_probability(sq_trigger_t *trig, float probability) {
+
+    trig->probability = probability;
 
 }
