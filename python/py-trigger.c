@@ -67,11 +67,26 @@ static PyObject *Py_trigger_set_cc(Py_trigger *self, PyObject *args) {
 
 }
 
+static PyObject *Py_trigger_set_probability(Py_trigger *self, PyObject *args) {
+
+    float probability;
+
+    if (!PyArg_ParseTuple(args, "f", &probability)) {
+        return NULL;
+    }
+
+    sq_trigger_set_probability(&self->trig, probability);
+
+    Py_RETURN_NONE;
+
+}
+
 static PyMethodDef Py_trigger_methods[] = {
 
     {"set_null", (PyCFunction) Py_trigger_set_null, METH_NOARGS, NULL},
     {"set_note", (PyCFunction) Py_trigger_set_note, METH_VARARGS, NULL},
     {"set_cc", (PyCFunction) Py_trigger_set_cc, METH_VARARGS, NULL},
+    {"set_probability", (PyCFunction) Py_trigger_set_probability, METH_VARARGS, NULL},
     {NULL}
 
 };
