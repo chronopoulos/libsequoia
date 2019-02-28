@@ -139,10 +139,10 @@ static PyObject *Py_sequence_pprint(Py_sequence *self, PyObject *args) {
 
 }
 
-static PyObject *Py_sequence_get_nsteps(Py_session *self, PyObject *args) {
+static PyObject *Py_sequence_get_nsteps(Py_sequence *self, PyObject *args) {
 
     int result;
-    result = sq_sequence_get_bpm(&self->seq);
+    result = sq_sequence_get_nsteps(&self->seq);
 
     return PyInt_FromLong(result);
 
