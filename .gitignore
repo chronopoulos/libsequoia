@@ -1,3 +1,4 @@
 *.swp
 lib/*
 python/build/*
+python/installed_files
