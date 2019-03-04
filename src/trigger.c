@@ -62,6 +62,14 @@ void sq_trigger_set_cc(sq_trigger_t *trig, int cc_number, int cc_value) {
 
 void sq_trigger_set_probability(sq_trigger_t *trig, float probability) {
 
+    if (probability < 0.) {
+        probability = 0.;
+    }
+
+    if (probability > 1.) {
+        probability = 1.;
+    }
+
     trig->probability = probability;
 
 }
