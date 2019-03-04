@@ -81,12 +81,27 @@ static PyObject *Py_trigger_set_probability(Py_trigger *self, PyObject *args) {
 
 }
 
+static PyObject *Py_trigger_set_microtime(Py_trigger *self, PyObject *args) {
+
+    float microtime;
+
+    if (!PyArg_ParseTuple(args, "f", &microtime)) {
+        return NULL;
+    }
+
+    sq_trigger_set_microtime(&self->trig, microtime);
+
+    Py_RETURN_NONE;
+
+}
+
 static PyMethodDef Py_trigger_methods[] = {
 
     {"set_null", (PyCFunction) Py_trigger_set_null, METH_NOARGS, NULL},
     {"set_note", (PyCFunction) Py_trigger_set_note, METH_VARARGS, NULL},
     {"set_cc", (PyCFunction) Py_trigger_set_cc, METH_VARARGS, NULL},
     {"set_probability", (PyCFunction) Py_trigger_set_probability, METH_VARARGS, NULL},
+    {"set_microtime", (PyCFunction) Py_trigger_set_microtime, METH_VARARGS, NULL},
     {NULL}
 
 };

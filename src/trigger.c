@@ -65,3 +65,18 @@ void sq_trigger_set_probability(sq_trigger_t *trig, float probability) {
     trig->probability = probability;
 
 }
+
+void sq_trigger_set_microtime(sq_trigger_t *trig, float microtime) {
+
+    if (microtime < -0.5) {
+        microtime = -0.5;
+    }
+
+    if (microtime >= 0.5) {
+        microtime = 0.4999;  // this is safe for tps < 10000 ?
+    }
+
+    trig->microtime = microtime;
+
+}
+
