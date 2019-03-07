@@ -56,6 +56,17 @@ void _session_serve_ctrl_msgs(sq_session_t *sesh) {
 
             sesh->go = msg.vb;
 
+            if (sesh->go) {
+                for (int i=0; i<sesh->nseqs; i++) {
+                    sesh->seqs[i]->is_playing = true;
+                }
+            } else {
+                for (int i=0; i<sesh->nseqs; i++) {
+                    sesh->seqs[i]->is_playing = false;
+                    _sequence_reset_now(sesh->seqs[i]);
+                }
+            }
+
         } else if (msg.param == SESSION_BPM) {
 
             _session_set_bpm_now(sesh, msg.vf);
@@ -181,34 +192,40 @@ jack_port_t *sq_session_create_outport(sq_session_t *sesh, const char *name) {
 
 void sq_session_start(sq_session_t *sesh) {
 
-    sesh->is_playing = true;
-    for (int i=0; i<sesh->nseqs; i++) {
-        sesh->seqs[i]->is_playing = true;
+    if (!sesh->is_playing) {
+
+        for (int i=0; i<sesh->nseqs; i++) {
+            sesh->seqs[i]->is_playing = true;
+        }
+
+        _session_ctrl_msg_t msg;
+        msg.param = SESSION_GO;
+        msg.vb = true;
+
+        _session_ringbuffer_write(sesh, &msg);
+
+        sesh->is_playing = true;
+
     }
-
-    _session_ctrl_msg_t msg;
-    msg.param = SESSION_GO;
-    msg.vb = true;
-
-    _session_ringbuffer_write(sesh, &msg);
 
 }
 
 void sq_session_stop(sq_session_t *sesh) {
 
-    sesh->is_playing = false;
-    for (int i=0; i<sesh->nseqs; i++) {
-        sesh->seqs[i]->is_playing = false;
-    }
+    if (sesh->is_playing) {
 
-    _session_ctrl_msg_t msg;
-    msg.param = SESSION_GO;
-    msg.vb = false;
+        _session_ctrl_msg_t msg;
+        msg.param = SESSION_GO;
+        msg.vb = false;
 
-    _session_ringbuffer_write(sesh, &msg);
+        _session_ringbuffer_write(sesh, &msg);
 
-    for (int i=0; i<sesh->nseqs; i++) {
-        sesh->seqs[i]->is_playing = false;
+        for (int i=0; i<sesh->nseqs; i++) {
+            sesh->seqs[i]->is_playing = false;
+        }
+
+        sesh->is_playing = false;
+
     }
 
 }

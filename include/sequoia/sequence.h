@@ -78,6 +78,7 @@ void sq_sequence_init(sq_sequence_t*, int, int);
 
 void _sequence_prepare_outport(sq_sequence_t*, jack_nframes_t);
 void _sequence_tick(sq_sequence_t*, jack_nframes_t);
+void _sequence_reset_now(sq_sequence_t*);
 
 void sq_sequence_set_name(sq_sequence_t*, const char*);
 void sq_sequence_set_outport(sq_sequence_t*, jack_port_t*);

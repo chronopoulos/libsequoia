@@ -87,7 +87,6 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
     seq->transpose = 0;
 
     seq->div = 1;
-    seq->idiv = 0;
 
     seq->trigs = malloc(seq->nsteps * sizeof(sq_trigger_t));
     for (int i=0; i<seq->nsteps; i++) {
@@ -100,13 +99,11 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
     for(int i=0; i<seq->nticks; i++) {
         seq->microgrid[i] = NULL;
     }
-    seq->ph = 0;
 
     seq->buf_off = malloc(seq->nticks * sizeof(midi_packet));
     for(int i=0; i<seq->nticks; i++) {
         seq->buf_off[i][0] = 0;
     }
-    seq->ridx_off = 0;
 
     // allocate and lock ringbuffer (universal ringbuffer length?)
     seq->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(_sequence_ctrl_msg_t));
@@ -120,6 +117,16 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
 
     seq->outport = NULL;
     seq->outport_buf = NULL;
+
+    _sequence_reset_now(seq);
+
+}
+
+void _sequence_reset_now(sq_sequence_t *seq) {
+
+    seq->idiv = 0;
+    seq->ph = 0;
+    seq->ridx_off = 0;
 
 }
 
