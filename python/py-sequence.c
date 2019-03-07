@@ -85,6 +85,20 @@ static PyObject *Py_sequence_set_playhead(Py_sequence *self, PyObject *args) {
 
 }
 
+static PyObject *Py_sequence_set_clockdivide(Py_sequence *self, PyObject *args) {
+
+    int div;
+
+    if (!PyArg_ParseTuple(args, "i", &div)) {
+        return NULL;
+    }
+
+    sq_sequence_set_clockdivide(&self->seq, div);
+
+    Py_RETURN_NONE;
+
+}
+
 static PyObject *Py_sequence_set_trig(Py_sequence *self, PyObject *args) {
 
     int stepIndex;
@@ -154,6 +168,7 @@ static PyMethodDef Py_sequence_methods[] = {
     {"set_outport", (PyCFunction) Py_sequence_set_outport, METH_VARARGS, NULL},
     {"set_transpose", (PyCFunction) Py_sequence_set_transpose, METH_VARARGS, NULL},
     {"set_playhead", (PyCFunction) Py_sequence_set_playhead, METH_VARARGS, NULL},
+    {"set_clockdivide", (PyCFunction) Py_sequence_set_clockdivide, METH_VARARGS, NULL},
     {"set_trig", (PyCFunction) Py_sequence_set_trig, METH_VARARGS, NULL},
     {"clear_trig", (PyCFunction) Py_sequence_clear_trig, METH_VARARGS, NULL},
     {"pprint", (PyCFunction) Py_sequence_pprint, METH_NOARGS, NULL},

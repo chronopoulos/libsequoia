@@ -86,6 +86,9 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
     seq->name[0] = '\0';
     seq->transpose = 0;
 
+    seq->div = 1;
+    seq->idiv = 0;
+
     seq->trigs = malloc(seq->nsteps * sizeof(sq_trigger_t));
     for (int i=0; i<seq->nsteps; i++) {
         sq_trigger_init(seq->trigs + i);
@@ -142,34 +145,40 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
     // serve any control messages in the ringbuffer
     _sequence_serve_ctrl_msgs(seq);
 
-    // handle any triggers from the microgrid
-    if ((trig = seq->microgrid[seq->ph])) { // if non-NULL
+    if (seq->idiv == 0) { // clock divide
 
-        dice = ((float) random()) / RAND_MAX;
-        if (dice <= trig->probability) {
+        // handle any triggers from the microgrid
+        if ((trig = seq->microgrid[seq->ph])) { // if non-NULL
 
-            midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
-            if (trig->type == TRIG_NOTE) {
+            dice = ((float) random()) / RAND_MAX;
+            if (dice <= trig->probability) {
 
-                midi_msg_write_ptr[0] = 143 + trig->channel;
-                midi_msg_write_ptr[1] = trig->note + seq->transpose;
-                midi_msg_write_ptr[2] = trig->velocity;
+                midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
+                if (trig->type == TRIG_NOTE) {
 
-                widx_off = (seq->ridx_off + (int)roundl(trig->length * seq->tps)) % seq->nticks;
-                seq->buf_off[widx_off][0] = 127 + trig->channel;
-                seq->buf_off[widx_off][1] = trig->note + seq->transpose;
-                seq->buf_off[widx_off][2] = trig->velocity;
+                    midi_msg_write_ptr[0] = 143 + trig->channel;
+                    midi_msg_write_ptr[1] = trig->note + seq->transpose;
+                    midi_msg_write_ptr[2] = trig->velocity;
+
+                    widx_off = (seq->ridx_off + (int)roundl(trig->length * seq->tps)) % seq->nticks;
+                    seq->buf_off[widx_off][0] = 127 + trig->channel;
+                    seq->buf_off[widx_off][1] = trig->note + seq->transpose;
+                    seq->buf_off[widx_off][2] = trig->velocity;
+
+                }
 
             }
 
         }
 
+        // increment ph
+        if (++(seq->ph) == seq->nticks) {
+            seq->ph = 0;
+        }
+
     }
 
-    // increment ph
-    if (++(seq->ph) == seq->nticks) {
-        seq->ph = 0;
-    }
+    if (++seq->idiv >= seq->div) seq->idiv = 0; // clock divide
 
     // handle any events in buf_off
     if (seq->buf_off[seq->ridx_off][0]) {  // if status byte != 0
@@ -323,6 +332,32 @@ void _sequence_set_playhead_now(sq_sequence_t *seq, int ph) {
     /* this function should only be called from within the audio callback */
 
     seq->ph = ph;
+
+}
+
+void sq_sequence_set_clockdivide(sq_sequence_t *seq, int div) {
+
+    if (div < 1) {
+        fprintf(stderr, "clock divide of %d is out of range (must be >= 1)\n", div);
+        return;
+    }
+
+    if (seq->is_playing) {
+
+        fprintf(stderr, "set clock divide while playing not implemented yet\n");
+
+    } else {
+
+        _sequence_set_clockdivide_now(seq, div);
+
+    }
+
+}
+
+void _sequence_set_clockdivide_now(sq_sequence_t *seq, int div) {
+
+    seq->div = div;
+    seq->idiv = 0;
 
 }
 
