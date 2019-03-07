@@ -69,6 +69,8 @@ void _sequence_serve_ctrl_msgs(sq_sequence_t *seq) {
             _sequence_set_transpose_now(seq, msg.vi);
         } else if (msg.param == SEQUENCE_PH) {
             _sequence_set_playhead_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_DIV) {
+            _sequence_set_clockdivide_now(seq, msg.vi);
         }
 
         avail -= sizeof(_sequence_ctrl_msg_t);
@@ -351,7 +353,11 @@ void sq_sequence_set_clockdivide(sq_sequence_t *seq, int div) {
 
     if (seq->is_playing) {
 
-        fprintf(stderr, "set clock divide while playing not implemented yet\n");
+        _sequence_ctrl_msg_t msg;
+        msg.param = SEQUENCE_DIV;
+        msg.vi = div;
+
+        _sequence_ringbuffer_write(seq, &msg);
 
     } else {
 

@@ -32,7 +32,8 @@
 
 typedef jack_midi_data_t midi_packet[3]; // equivalent to 3 unsigned chars
 
-enum _sequence_param {SEQUENCE_SET_TRIG, SEQUENCE_CLEAR_TRIG, SEQUENCE_TRANSPOSE, SEQUENCE_PH};
+enum _sequence_param {SEQUENCE_SET_TRIG, SEQUENCE_CLEAR_TRIG, SEQUENCE_TRANSPOSE, SEQUENCE_PH,
+                        SEQUENCE_DIV};
 
 typedef struct {
 
