@@ -71,6 +71,8 @@ void _sequence_serve_ctrl_msgs(sq_sequence_t *seq) {
             _sequence_set_playhead_now(seq, msg.vi);
         } else if (msg.param == SEQUENCE_DIV) {
             _sequence_set_clockdivide_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_MUTE) {
+            _sequence_set_mute_now(seq, msg.vb);
         }
 
         avail -= sizeof(_sequence_ctrl_msg_t);
@@ -120,6 +122,8 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
     seq->outport = NULL;
     seq->outport_buf = NULL;
 
+    seq->mute = false;
+
     _sequence_reset_now(seq);
 
 }
@@ -154,25 +158,31 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
     // serve any control messages in the ringbuffer
     _sequence_serve_ctrl_msgs(seq);
 
+    // TODO: re-order if statements for efficiency
+
     if (seq->idiv == 0) { // clock divide
 
         // handle any triggers from the microgrid
         if ((trig = seq->microgrid[seq->ph])) { // if non-NULL
 
-            dice = ((float) random()) / RAND_MAX;
-            if (dice <= trig->probability) {
+            if (!seq->mute) {
 
-                midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
-                if (trig->type == TRIG_NOTE) {
+                dice = ((float) random()) / RAND_MAX;
+                if (dice <= trig->probability) {
 
-                    midi_msg_write_ptr[0] = 143 + trig->channel;
-                    midi_msg_write_ptr[1] = trig->note + seq->transpose;
-                    midi_msg_write_ptr[2] = trig->velocity;
+                    midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
+                    if (trig->type == TRIG_NOTE) {
 
-                    widx_off = (seq->ridx_off + (int)roundl(trig->length * seq->tps)) % seq->nticks;
-                    seq->buf_off[widx_off][0] = 127 + trig->channel;
-                    seq->buf_off[widx_off][1] = trig->note + seq->transpose;
-                    seq->buf_off[widx_off][2] = trig->velocity;
+                        midi_msg_write_ptr[0] = 143 + trig->channel;
+                        midi_msg_write_ptr[1] = trig->note + seq->transpose;
+                        midi_msg_write_ptr[2] = trig->velocity;
+
+                        widx_off = (seq->ridx_off + (int)roundl(trig->length * seq->tps)) % seq->nticks;
+                        seq->buf_off[widx_off][0] = 127 + trig->channel;
+                        seq->buf_off[widx_off][1] = trig->note + seq->transpose;
+                        seq->buf_off[widx_off][2] = trig->velocity;
+
+                    }
 
                 }
 
@@ -371,6 +381,30 @@ void _sequence_set_clockdivide_now(sq_sequence_t *seq, int div) {
 
     seq->div = div;
     seq->idiv = 0;
+
+}
+
+void sq_sequence_set_mute(sq_sequence_t *seq, bool mute) {
+
+    if (seq->is_playing) {
+
+        _sequence_ctrl_msg_t msg;
+        msg.param = SEQUENCE_MUTE;
+        msg.vb = mute;
+
+        _sequence_ringbuffer_write(seq, &msg);
+
+    } else {
+
+        _sequence_set_mute_now(seq, mute);
+
+    }
+
+}
+
+void _sequence_set_mute_now(sq_sequence_t *seq, bool mute) {
+
+    seq->mute = mute;
 
 }
 

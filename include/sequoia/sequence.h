@@ -33,7 +33,7 @@
 typedef jack_midi_data_t midi_packet[3]; // equivalent to 3 unsigned chars
 
 enum _sequence_param {SEQUENCE_SET_TRIG, SEQUENCE_CLEAR_TRIG, SEQUENCE_TRANSPOSE, SEQUENCE_PH,
-                        SEQUENCE_DIV};
+                        SEQUENCE_DIV, SEQUENCE_MUTE};
 
 typedef struct {
 
@@ -72,6 +72,7 @@ typedef struct {
     jack_ringbuffer_t *rb;
 
     int div, idiv;
+    bool mute;
 
 } sq_sequence_t;
 
@@ -98,6 +99,9 @@ void _sequence_set_playhead_now(sq_sequence_t*, int);
 
 void sq_sequence_set_clockdivide(sq_sequence_t*, int);
 void _sequence_set_clockdivide_now(sq_sequence_t*, int);
+
+void sq_sequence_set_mute(sq_sequence_t*, bool);
+void _sequence_set_mute_now(sq_sequence_t*, bool);
 
 void sq_sequence_pprint(sq_sequence_t*);
 
