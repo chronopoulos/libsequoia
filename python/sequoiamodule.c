@@ -31,6 +31,10 @@ static PyObject *initsequoia_worker(void) {
         return m;
     }
 
+    if (PyType_Ready(&Py_portType) < 0) {
+        return m;
+    }
+
 #if PY_MAJOR_VERSION >= 3
     m = PyModule_Create(&moduledef);
 #else
@@ -45,6 +49,9 @@ static PyObject *initsequoia_worker(void) {
 
     Py_INCREF (&Py_sequenceType);
     PyModule_AddObject (m, "trigger", (PyObject *) &Py_triggerType);
+
+    Py_INCREF (&Py_portType);
+    PyModule_AddObject (m, "port", (PyObject *) &Py_portType);
 
     return m;
 

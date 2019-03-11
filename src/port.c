@@ -19,12 +19,15 @@
 
 */
 
-#ifndef SEQUOIA_H
-#define SEQUOIA_H
+#include <string.h>
 
-#include "sequoia/session.h"
-#include "sequoia/sequence.h"
-#include "sequoia/trigger.h"
-#include "sequoia/port.h"
+#include "sequoia.h"
 
-#endif
+void sq_port_init(sq_port_t *port, enum port_type type, const char *name) {
+
+    port->type = type;
+    strcpy(port->name, name);
+    port->jack_port = NULL;
+
+}
+

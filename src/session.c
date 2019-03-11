@@ -99,6 +99,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
     if (sesh->go) {
 
         // do this once per port, per processing callback
+        // TODO this is currently redundant!
         for (int i=0; i<sesh->nseqs; i++) {
             _sequence_prepare_outport(sesh->seqs[i], nframes);
         }
@@ -175,18 +176,29 @@ void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
 
 }
 
-jack_port_t *sq_session_create_outport(sq_session_t *sesh, const char *name) {
+int sq_session_register_port(sq_session_t *sesh, sq_port_t *port) {
 
-    jack_port_t *port;
+    jack_port_t *jack_port;
+    unsigned long flags;
 
-    port = jack_port_register(sesh->jack_client, name, JACK_DEFAULT_MIDI_TYPE,
-                                JackPortIsOutput, 0);
-
-    if (!port) {
-        fprintf(stderr, "failed to create outport\n");
+    flags = 0;
+    if (port->type == PORT_IN) {
+        flags = JackPortIsInput;
+    } else if (port->type == PORT_OUT) {
+        flags = JackPortIsOutput;
     }
 
-    return port; // possibly NULL
+    jack_port = jack_port_register(sesh->jack_client, port->name,
+                                    JACK_DEFAULT_MIDI_TYPE, flags, 0);
+
+    if (!jack_port) {
+        fprintf(stderr, "failed to create JACK port\n");
+        return -1;
+    }
+
+    port->jack_port = jack_port;
+
+    return 0;
 
 }
 

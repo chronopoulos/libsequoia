@@ -140,7 +140,7 @@ void _sequence_prepare_outport(sq_sequence_t *seq, jack_nframes_t nframes) {
 
     /* this should be called once per sequence at the start of a processing callback */
 
-    seq->outport_buf = jack_port_get_buffer(seq->outport, nframes);
+    seq->outport_buf = jack_port_get_buffer(seq->outport->jack_port, nframes);
     jack_midi_clear_buffer(seq->outport_buf);
 
 }
@@ -220,9 +220,13 @@ void sq_sequence_set_name(sq_sequence_t *seq, const char *name) {
 
 }
 
-void sq_sequence_set_outport(sq_sequence_t *seq, jack_port_t *port) {
+void sq_sequence_set_outport(sq_sequence_t *seq, sq_port_t *port) {
 
-    seq->outport = port;
+    if (port->type == PORT_OUT) {
+        seq->outport = port;
+    } else {
+        fprintf(stderr, "wrong port type\n");
+    }
 
 }
 

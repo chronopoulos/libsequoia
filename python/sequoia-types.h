@@ -30,13 +30,12 @@ typedef struct {
 
     PyObject_HEAD
 
-    sq_trigger_t trig;
-    jack_port_t *outport;
+    sq_port_t port;
 
-} Py_outport;
+} Py_port;
 
 extern PyTypeObject Py_sessionType;
 extern PyTypeObject Py_sequenceType;
 extern PyTypeObject Py_triggerType;
-extern PyTypeObject Py_outportType;
+extern PyTypeObject Py_portType;
 

@@ -19,12 +19,23 @@
 
 */
 
-#ifndef SEQUOIA_H
-#define SEQUOIA_H
+#ifndef PORT_H
+#define PORT_H
 
-#include "sequoia/session.h"
-#include "sequoia/sequence.h"
-#include "sequoia/trigger.h"
-#include "sequoia/port.h"
+#include <jack/midiport.h>
+
+#define MAX_PORT_NAME_LENGTH 255
+
+enum port_type {PORT_IN, PORT_OUT};
+
+typedef struct {
+
+    enum port_type type;
+    char name[MAX_PORT_NAME_LENGTH + 1];
+    jack_port_t *jack_port;
+
+} sq_port_t;
+
+void sq_port_init(sq_port_t*, enum port_type, const char*);
 
 #endif

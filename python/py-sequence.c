@@ -145,15 +145,12 @@ static PyObject *Py_sequence_clear_trig(Py_sequence *self, PyObject *args) {
 static PyObject *Py_sequence_set_outport(Py_sequence *self, PyObject *args) {
 
     PyObject *object;
-    jack_port_t *outport;
 
     if (!PyArg_ParseTuple(args, "O", &object)) {
         return NULL;
     }
 
-    outport = (jack_port_t*) PyCObject_AsVoidPtr(object);
-
-    sq_sequence_set_outport(&self->seq, outport);
+    sq_sequence_set_outport(&self->seq, &((Py_port*)object)->port);
 
     Py_RETURN_NONE;
 

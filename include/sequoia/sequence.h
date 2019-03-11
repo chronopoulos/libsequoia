@@ -27,6 +27,7 @@
 #include <jack/ringbuffer.h>
 
 #include "trigger.h"
+#include "port.h"
 
 #define MAX_NAME_LENGTH 255
 
@@ -59,7 +60,7 @@ typedef struct {
     int ridx_off;
 
     // TBD
-    jack_port_t *outport;
+    sq_port_t *outport;
     void *outport_buf;
 
     // this is only touched by UI
@@ -83,7 +84,7 @@ void _sequence_tick(sq_sequence_t*, jack_nframes_t);
 void _sequence_reset_now(sq_sequence_t*);
 
 void sq_sequence_set_name(sq_sequence_t*, const char*);
-void sq_sequence_set_outport(sq_sequence_t*, jack_port_t*);
+void sq_sequence_set_outport(sq_sequence_t*, sq_port_t*);
 
 void sq_sequence_set_trig(sq_sequence_t*, int, sq_trigger_t*);
 void _sequence_set_trig_now(sq_sequence_t*, int, sq_trigger_t*);
