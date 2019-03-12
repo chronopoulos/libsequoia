@@ -34,7 +34,11 @@ static PyObject *Py_port_repr(Py_port *self, PyObject *unused) {
     PyObject *result = NULL;
     char result_str[96];
 
-    sprintf(result_str, "<sequoia outport: %s>", self->port.name);
+    if (self->port.type == PORT_IN) {
+        sprintf(result_str, "<sequoia in-port: %s>", self->port.name);
+    } else if (self->port.type == PORT_OUT) {
+        sprintf(result_str, "<sequoia out-port: %s>", self->port.name);
+    }
 
     result = PyUnicode_FromString(result_str);
 
@@ -71,7 +75,7 @@ static PyMethodDef Py_port_methods[] = {
 
 PyTypeObject Py_portType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "sequoia.outport",                 /* tp_name           */
+    "sequoia.port",                 /* tp_name           */
     sizeof (Py_port),             /* tp_basicsize      */
     0,                            /* tp_itemsize       */
     (destructor) Py_port_del,     /* tp_dealloc        */
@@ -81,7 +85,7 @@ PyTypeObject Py_portType = {
     0,                            /* tp_compare        */
     (reprfunc) Py_port_repr,      /* tp_repr           */
     0,                            /* tp_as_number      */
-    0, //&Py_cvec_tp_as_outport, /* tp_as_outport    */
+    0, //&Py_cvec_tp_as_sequence, /* tp_as_sequence    */
     0,                            /* tp_as_mapping     */
     0,                            /* tp_hash           */
     0,                            /* tp_call           */
