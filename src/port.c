@@ -39,3 +39,14 @@ void sq_port_init(sq_port_t *port, enum port_type type, const char *name) {
 
 }
 
+int sq_port_get_type(sq_port_t *port) {
+
+    return port->type;
+
+}
+
+char *sq_port_get_name(sq_port_t *port) {
+
+    return port->name;
+
+}

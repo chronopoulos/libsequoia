@@ -42,8 +42,29 @@ static PyObject *Py_port_repr(Py_port *self, PyObject *unused) {
 
 }
 
+static PyObject *Py_port_get_type(Py_port *self, PyObject *unused) {
+
+    int result;
+    result = sq_port_get_type(&self->port);
+
+    return PyInt_FromLong(result);
+
+}
+
+static PyObject *Py_port_get_name(Py_port *self, PyObject *unused) {
+
+    PyObject *result = NULL;
+
+    result = PyString_FromString(sq_port_get_name(&self->port));
+
+    return result;
+
+}
+
 static PyMethodDef Py_port_methods[] = {
 
+    {"get_type", (PyCFunction) Py_port_get_type, METH_NOARGS, NULL},
+    {"get_name", (PyCFunction) Py_port_get_name, METH_NOARGS, NULL},
     {NULL}
 
 };

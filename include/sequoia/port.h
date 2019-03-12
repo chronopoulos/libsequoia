@@ -37,5 +37,7 @@ typedef struct {
 } sq_port_t;
 
 void sq_port_init(sq_port_t*, enum port_type, const char*);
+int sq_port_get_type(sq_port_t*);
+char *sq_port_get_name(sq_port_t*);
 
 #endif
