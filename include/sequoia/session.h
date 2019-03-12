@@ -33,6 +33,9 @@
 #define MAX_NSEQ 256
 #define RINGBUFFER_LENGTH 16
 #define DEFAULT_BPM 120.00 
+#define MAX_NIPORTS 16
+#define MAX_NOPORTS 16
+
 // (constants for bpm translation)
 #define STEPS_PER_BEAT 4
 #define SECONDS_PER_MINUTE 60
@@ -72,6 +75,11 @@ typedef struct {
 
     // audio only
     jack_nframes_t frame;
+
+    // ports
+    sq_port_t *iports[MAX_NIPORTS];
+    sq_port_t *oports[MAX_NOPORTS];
+    int niports, noports;
 
 } sq_session_t;
 

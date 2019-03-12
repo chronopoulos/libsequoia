@@ -137,6 +137,8 @@ void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
     sesh->tps = tps;
     sesh->nseqs = 0;
     sesh->frame = 0;
+    sesh->niports = 0;
+    sesh->noports = 0;
 
     // seed random number generator with system time
     srandom(time(NULL));
@@ -179,12 +181,19 @@ void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
 int sq_session_register_port(sq_session_t *sesh, sq_port_t *port) {
 
     jack_port_t *jack_port;
-    unsigned long flags;
+    unsigned long flags = 0;
 
-    flags = 0;
     if (port->type == PORT_IN) {
+        if (sesh->niports == MAX_NIPORTS) {
+            fprintf(stderr, "max number of inports reached: %d\n", MAX_NIPORTS);
+            return -1;
+        }
         flags = JackPortIsInput;
     } else if (port->type == PORT_OUT) {
+        if (sesh->noports == MAX_NOPORTS) {
+            fprintf(stderr, "max number of outports reached: %d\n", MAX_NOPORTS);
+            return -1;
+        }
         flags = JackPortIsOutput;
     }
 
@@ -197,6 +206,14 @@ int sq_session_register_port(sq_session_t *sesh, sq_port_t *port) {
     }
 
     port->jack_port = jack_port;
+
+    if (port->type == PORT_IN) {
+        sesh->iports[sesh->niports] = port;
+        sesh->niports++;
+    } else if (port->type == PORT_OUT) {
+        sesh->oports[sesh->noports] = port;
+        sesh->noports++;
+    }
 
     return 0;
 
