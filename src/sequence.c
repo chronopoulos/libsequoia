@@ -120,7 +120,6 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
     seq->is_playing = false;
 
     seq->outport = NULL;
-    seq->outport_buf = NULL;
 
     seq->mute = false;
 
@@ -133,15 +132,6 @@ void _sequence_reset_now(sq_sequence_t *seq) {
     seq->idiv = 0;
     seq->ph = 0;
     seq->ridx_off = 0;
-
-}
-
-void _sequence_prepare_outport(sq_sequence_t *seq, jack_nframes_t nframes) {
-
-    /* this should be called once per sequence at the start of a processing callback */
-
-    seq->outport_buf = jack_port_get_buffer(seq->outport->jack_port, nframes);
-    jack_midi_clear_buffer(seq->outport_buf);
 
 }
 
@@ -170,7 +160,7 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
                 dice = ((float) random()) / RAND_MAX;
                 if (dice <= trig->probability) {
 
-                    midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
+                    midi_msg_write_ptr = jack_midi_event_reserve(seq->outport->buf, idx, 3);
                     if (trig->type == TRIG_NOTE) {
 
                         midi_msg_write_ptr[0] = 143 + trig->channel;
@@ -201,7 +191,7 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
 
     // handle any events in buf_off
     if (seq->buf_off[seq->ridx_off][0]) {  // if status byte != 0
-        midi_msg_write_ptr = jack_midi_event_reserve(seq->outport_buf, idx, 3);
+        midi_msg_write_ptr = jack_midi_event_reserve(seq->outport->buf, idx, 3);
         memcpy(midi_msg_write_ptr, seq->buf_off[seq->ridx_off], 3);
         seq->buf_off[seq->ridx_off][0] = 0;  // clear this event
     }

@@ -61,7 +61,6 @@ typedef struct {
 
     // TBD
     sq_port_t *outport;
-    void *outport_buf;
 
     // this is only touched by UI
     bool is_playing;

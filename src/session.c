@@ -98,10 +98,13 @@ static int _process(jack_nframes_t nframes, void *arg) {
     jack_nframes_t nframes_left, frame_inc;
     if (sesh->go) {
 
-        // do this once per port, per processing callback
-        // TODO this is currently redundant!
-        for (int i=0; i<sesh->nseqs; i++) {
-            _sequence_prepare_outport(sesh->seqs[i], nframes);
+        // prepare the outports 
+        // need to do this once per port, per processing callback
+        sq_port_t *port;
+        for (int i=0; i<sesh->noports; i++) {
+            port = sesh->oports[i];
+            port->buf = jack_port_get_buffer(port->jack_port, nframes);
+            jack_midi_clear_buffer(port->buf);
         }
 
         nframes_left = nframes;

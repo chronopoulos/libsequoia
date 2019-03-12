@@ -36,6 +36,7 @@ void sq_port_init(sq_port_t *port, enum port_type type, const char *name) {
 
 
     port->jack_port = NULL;
+    port->buf = NULL;
 
 }
 

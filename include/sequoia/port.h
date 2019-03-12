@@ -33,6 +33,7 @@ typedef struct {
     enum port_type type;
     char name[MAX_PORT_NAME_LEN + 1];
     jack_port_t *jack_port;
+    void *buf;
 
 } sq_port_t;
 
