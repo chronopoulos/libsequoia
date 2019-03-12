@@ -216,7 +216,13 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
 void sq_sequence_set_name(sq_sequence_t *seq, const char *name) {
 
     // this parameter is safe to touch directly (for now)
-    strcpy(seq->name, name);
+
+    if (strlen(name) <= MAX_SEQ_NAME_LEN) {
+        strcpy(seq->name, name);
+    } else {
+        strncpy(seq->name, name, MAX_SEQ_NAME_LEN);
+        seq->name[MAX_SEQ_NAME_LEN] = '\0';
+    }
 
 }
 

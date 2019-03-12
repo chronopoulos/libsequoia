@@ -26,7 +26,15 @@
 void sq_port_init(sq_port_t *port, enum port_type type, const char *name) {
 
     port->type = type;
-    strcpy(port->name, name);
+
+    if (strlen(name) <= MAX_PORT_NAME_LEN) {
+        strcpy(port->name, name);
+    } else {
+        strncpy(port->name, name, MAX_SEQ_NAME_LEN);
+        port->name[MAX_SEQ_NAME_LEN] = '\0';
+    }
+
+
     port->jack_port = NULL;
 
 }

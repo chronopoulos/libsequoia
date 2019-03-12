@@ -29,7 +29,7 @@
 #include "trigger.h"
 #include "port.h"
 
-#define MAX_NAME_LENGTH 255
+#define MAX_SEQ_NAME_LEN 255
 
 typedef jack_midi_data_t midi_packet[3]; // equivalent to 3 unsigned chars
 
@@ -51,7 +51,7 @@ typedef struct {
 typedef struct {
 
     // these are touched by both the audio and the UI thread
-    char name[MAX_NAME_LENGTH + 1];
+    char name[MAX_SEQ_NAME_LEN + 1];
     int transpose;
     sq_trigger_t *trigs;
     sq_trigger_t **microgrid;

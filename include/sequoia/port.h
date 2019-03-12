@@ -24,14 +24,14 @@
 
 #include <jack/midiport.h>
 
-#define MAX_PORT_NAME_LENGTH 255
+#define MAX_PORT_NAME_LEN 255
 
 enum port_type {PORT_IN, PORT_OUT};
 
 typedef struct {
 
     enum port_type type;
-    char name[MAX_PORT_NAME_LENGTH + 1];
+    char name[MAX_PORT_NAME_LEN + 1];
     jack_port_t *jack_port;
 
 } sq_port_t;
