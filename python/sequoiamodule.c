@@ -53,6 +53,9 @@ static PyObject *initsequoia_worker(void) {
     Py_INCREF (&Py_portType);
     PyModule_AddObject (m, "port", (PyObject *) &Py_portType);
 
+    PyModule_AddIntMacro(m, PORT_IN);
+    PyModule_AddIntMacro(m, PORT_OUT);
+
     return m;
 
 }
