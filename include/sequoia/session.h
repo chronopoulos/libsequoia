@@ -27,14 +27,15 @@
 #include <jack/midiport.h>
 
 #include "sequence.h"
-#include "port.h"
+#include "outport.h"
+#include "inport.h"
 
 // (config parameters)
 #define MAX_NSEQ 256
 #define RINGBUFFER_LENGTH 16
 #define DEFAULT_BPM 120.00 
-#define MAX_NIPORTS 16
-#define MAX_NOPORTS 16
+#define MAX_NINPORTS 16
+#define MAX_NOUTPORTS 16
 
 // (constants for bpm translation)
 #define STEPS_PER_BEAT 4
@@ -77,14 +78,15 @@ typedef struct {
     jack_nframes_t frame;
 
     // ports
-    sq_port_t *iports[MAX_NIPORTS];
-    sq_port_t *oports[MAX_NOPORTS];
-    int niports, noports;
+    sq_inport_t *inports[MAX_NINPORTS];
+    sq_outport_t *outports[MAX_NOUTPORTS];
+    int ninports, noutports;
 
 } sq_session_t;
 
 void sq_session_init(sq_session_t*, const char*, int);
-int sq_session_register_port(sq_session_t *, sq_port_t*);
+int sq_session_register_outport(sq_session_t *, sq_outport_t*);
+int sq_session_register_inport(sq_session_t *, sq_inport_t*);
 void sq_session_start(sq_session_t*);
 void sq_session_stop(sq_session_t*);
 

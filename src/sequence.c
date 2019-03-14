@@ -216,13 +216,9 @@ void sq_sequence_set_name(sq_sequence_t *seq, const char *name) {
 
 }
 
-void sq_sequence_set_outport(sq_sequence_t *seq, sq_port_t *port) {
+void sq_sequence_set_outport(sq_sequence_t *seq, sq_outport_t *outport) {
 
-    if (port->type == PORT_OUT) {
-        seq->outport = port;
-    } else {
-        fprintf(stderr, "wrong port type\n");
-    }
+    seq->outport = outport;
 
 }
 

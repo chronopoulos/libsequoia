@@ -87,24 +87,27 @@ void _session_serve_ctrl_msgs(sq_session_t *sesh) {
 
 }
 
-// </helper>
-
 static int _process(jack_nframes_t nframes, void *arg) {
 
     sq_session_t *sesh = (sq_session_t*) arg;
 
     _session_serve_ctrl_msgs(sesh);
 
+    // serve the inports
+    for (int i=0; i<sesh->ninports; i++) {
+        _inport_serve(sesh->inports[i], nframes);
+    }
+
     jack_nframes_t nframes_left, frame_inc;
     if (sesh->go) {
 
         // prepare the outports 
         // need to do this once per port, per processing callback
-        sq_port_t *port;
-        for (int i=0; i<sesh->noports; i++) {
-            port = sesh->oports[i];
-            port->buf = jack_port_get_buffer(port->jack_port, nframes);
-            jack_midi_clear_buffer(port->buf);
+        sq_outport_t *outport;
+        for (int i=0; i<sesh->noutports; i++) {
+            outport = sesh->outports[i];
+            outport->buf = jack_port_get_buffer(outport->jack_port, nframes);
+            jack_midi_clear_buffer(outport->buf);
         }
 
         nframes_left = nframes;
@@ -133,6 +136,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 }
 
+// </helper>
+
 void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
 
     // initialize struct members
@@ -140,8 +145,8 @@ void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
     sesh->tps = tps;
     sesh->nseqs = 0;
     sesh->frame = 0;
-    sesh->niports = 0;
-    sesh->noports = 0;
+    sesh->ninports = 0;
+    sesh->noutports = 0;
 
     // seed random number generator with system time
     srandom(time(NULL));
@@ -181,42 +186,53 @@ void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
 
 }
 
-int sq_session_register_port(sq_session_t *sesh, sq_port_t *port) {
+int sq_session_register_outport(sq_session_t *sesh, sq_outport_t *outport) {
 
     jack_port_t *jack_port;
-    unsigned long flags = 0;
 
-    if (port->type == PORT_IN) {
-        if (sesh->niports == MAX_NIPORTS) {
-            fprintf(stderr, "max number of inports reached: %d\n", MAX_NIPORTS);
-            return -1;
-        }
-        flags = JackPortIsInput;
-    } else if (port->type == PORT_OUT) {
-        if (sesh->noports == MAX_NOPORTS) {
-            fprintf(stderr, "max number of outports reached: %d\n", MAX_NOPORTS);
-            return -1;
-        }
-        flags = JackPortIsOutput;
+    if (sesh->noutports == MAX_NOUTPORTS) {
+        fprintf(stderr, "max number of outports reached: %d\n", MAX_NOUTPORTS);
+        return -1;
     }
 
-    jack_port = jack_port_register(sesh->jack_client, port->name,
-                                    JACK_DEFAULT_MIDI_TYPE, flags, 0);
+    jack_port = jack_port_register(sesh->jack_client, outport->name,
+                                    JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
 
     if (!jack_port) {
         fprintf(stderr, "failed to create JACK port\n");
         return -1;
     }
 
-    port->jack_port = jack_port;
+    outport->jack_port = jack_port;
 
-    if (port->type == PORT_IN) {
-        sesh->iports[sesh->niports] = port;
-        sesh->niports++;
-    } else if (port->type == PORT_OUT) {
-        sesh->oports[sesh->noports] = port;
-        sesh->noports++;
+    sesh->outports[sesh->noutports] = outport;
+    sesh->noutports++;
+
+    return 0;
+
+}
+
+int sq_session_register_inport(sq_session_t *sesh, sq_inport_t *inport) {
+
+    jack_port_t *jack_port;
+
+    if (sesh->ninports == MAX_NINPORTS) {
+        fprintf(stderr, "max number of inports reached: %d\n", MAX_NINPORTS);
+        return -1;
     }
+
+    jack_port = jack_port_register(sesh->jack_client, inport->name,
+                                    JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+
+    if (!jack_port) {
+        fprintf(stderr, "failed to create JACK port\n");
+        return -1;
+    }
+
+    inport->jack_port = jack_port;
+
+    sesh->inports[sesh->ninports] = inport;
+    sesh->ninports++;
 
     return 0;
 

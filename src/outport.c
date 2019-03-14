@@ -23,31 +23,23 @@
 
 #include "sequoia.h"
 
-void sq_port_init(sq_port_t *port, enum port_type type, const char *name) {
+void sq_outport_init(sq_outport_t *outport, const char *name) {
 
-    port->type = type;
-
-    if (strlen(name) <= MAX_PORT_NAME_LEN) {
-        strcpy(port->name, name);
+    if (strlen(name) <= OUTPORT_MAX_NAME_LEN) {
+        strcpy(outport->name, name);
     } else {
-        strncpy(port->name, name, MAX_SEQ_NAME_LEN);
-        port->name[MAX_SEQ_NAME_LEN] = '\0';
+        strncpy(outport->name, name, OUTPORT_MAX_NAME_LEN);
+        outport->name[OUTPORT_MAX_NAME_LEN] = '\0';
     }
 
 
-    port->jack_port = NULL;
-    port->buf = NULL;
+    outport->jack_port = NULL;
+    outport->buf = NULL;
 
 }
 
-int sq_port_get_type(sq_port_t *port) {
+char *sq_outport_get_name(sq_outport_t *outport) {
 
-    return port->type;
-
-}
-
-char *sq_port_get_name(sq_port_t *port) {
-
-    return port->name;
+    return outport->name;
 
 }

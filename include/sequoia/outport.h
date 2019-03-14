@@ -19,13 +19,22 @@
 
 */
 
-#ifndef SEQUOIA_H
-#define SEQUOIA_H
+#ifndef OUTPORT_H
+#define OUTPORT_H
 
-#include "sequoia/session.h"
-#include "sequoia/sequence.h"
-#include "sequoia/trigger.h"
-#include "sequoia/outport.h"
-#include "sequoia/inport.h"
+#include <jack/midiport.h>
+
+#define OUTPORT_MAX_NAME_LEN 255
+
+typedef struct {
+
+    char name[OUTPORT_MAX_NAME_LEN + 1];
+    jack_port_t *jack_port;
+    void *buf;
+
+} sq_outport_t;
+
+void sq_outport_init(sq_outport_t*, const char*);
+char *sq_outport_get_name(sq_outport_t*);
 
 #endif

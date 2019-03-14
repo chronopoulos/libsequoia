@@ -19,26 +19,34 @@
 
 */
 
-#ifndef PORT_H
-#define PORT_H
+#ifndef inport_H
+#define inport_H
 
 #include <jack/midiport.h>
 
-#define MAX_PORT_NAME_LEN 255
+#include "sequence.h"
 
-enum port_type {PORT_IN, PORT_OUT};
+#define INPORT_MAX_NAME_LEN 255
+#define INPORT_MAX_NSEQ 16
+
+enum inport_type {INPORT_TRANSPOSE, INPORT_PLAYHEAD, INPORT_CLOCKDIVIDE, INPORT_DIRECTION,
+                    INPORT_MUTE, INPORT_FIRST, INPORT_LAST};
 
 typedef struct {
 
-    enum port_type type;
-    char name[MAX_PORT_NAME_LEN + 1];
+    enum inport_type type;
+
+    char name[INPORT_MAX_NAME_LEN + 1];
     jack_port_t *jack_port;
     void *buf;
 
-} sq_port_t;
+    sq_sequence_t *seqs[INPORT_MAX_NSEQ];
+    int nseqs;
 
-void sq_port_init(sq_port_t*, enum port_type, const char*);
-int sq_port_get_type(sq_port_t*);
-char *sq_port_get_name(sq_port_t*);
+} sq_inport_t;
+
+void sq_inport_init(sq_inport_t*, enum inport_type, const char*);
+void _inport_add_sequence_now(sq_inport_t*, sq_sequence_t*);
+void _inport_serve(sq_inport_t*, jack_nframes_t);
 
 #endif
