@@ -148,14 +148,12 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
     // serve any control messages in the ringbuffer
     _sequence_serve_ctrl_msgs(seq);
 
-    // TODO: re-order if statements for efficiency
-
     if (seq->idiv == 0) { // clock divide
 
         // handle any triggers from the microgrid
-        if ((trig = seq->microgrid[seq->ph])) { // if non-NULL
+        if (!seq->mute) {
 
-            if (!seq->mute) {
+            if ((trig = seq->microgrid[seq->ph])) { // if non-NULL
 
                 dice = ((float) random()) / RAND_MAX;
                 if (dice <= trig->probability) {
