@@ -55,7 +55,6 @@ typedef struct {
     int transpose;
     sq_trigger_t *trigs;
     sq_trigger_t **microgrid;
-    int ph;
     midi_packet *buf_off;
     int ridx_off;
 
@@ -68,6 +67,7 @@ typedef struct {
     int nsteps;
     int tps;
     int nticks;
+    int tick;
 
     jack_ringbuffer_t *rb;
 

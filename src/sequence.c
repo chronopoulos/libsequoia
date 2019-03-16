@@ -130,7 +130,7 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
 void _sequence_reset_now(sq_sequence_t *seq) {
 
     seq->idiv = 0;
-    seq->ph = 0;
+    seq->tick = 0;
     seq->ridx_off = 0;
 
 }
@@ -153,7 +153,7 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
         // handle any triggers from the microgrid
         if (!seq->mute) {
 
-            if ((trig = seq->microgrid[seq->ph])) { // if non-NULL
+            if ((trig = seq->microgrid[seq->tick])) { // if non-NULL
 
                 dice = ((float) random()) / RAND_MAX;
                 if (dice <= trig->probability) {
@@ -178,9 +178,9 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
 
         }
 
-        // increment ph
-        if (++(seq->ph) == seq->nticks) {
-            seq->ph = 0;
+        // increment tick index
+        if (++(seq->tick) == seq->nticks) {
+            seq->tick = 0;
         }
 
     }
@@ -340,11 +340,11 @@ void sq_sequence_set_playhead(sq_sequence_t *seq, int ph) {
 
 }
 
-void _sequence_set_playhead_now(sq_sequence_t *seq, int ph) {
+void _sequence_set_playhead_now(sq_sequence_t *seq, int playhead) {
 
     /* this function should only be called from within the audio callback */
 
-    seq->ph = ph;
+    seq->tick = playhead * seq->tps;
 
 }
 
@@ -373,6 +373,8 @@ void sq_sequence_set_clockdivide(sq_sequence_t *seq, int div) {
 
 void _sequence_set_clockdivide_now(sq_sequence_t *seq, int div) {
 
+    /* this function should only be called from within the audio callback */
+
     seq->div = div;
     seq->idiv = 0;
 
@@ -397,6 +399,8 @@ void sq_sequence_set_mute(sq_sequence_t *seq, bool mute) {
 }
 
 void _sequence_set_mute_now(sq_sequence_t *seq, bool mute) {
+
+    /* this function should only be called from within the audio callback */
 
     seq->mute = mute;
 
