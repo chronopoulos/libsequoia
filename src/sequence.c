@@ -123,7 +123,27 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
 
     seq->mute = false;
 
+    sq_sequence_noti_init(&seq->noti);
+    seq->noti_enable = false;
+
     _sequence_reset_now(seq);
+
+}
+
+void sq_sequence_noti_init(sq_sequence_noti_t *noti) {
+
+    noti->playhead_new = false;
+    noti->playhead = 0;
+
+    noti->transpose_new = false;
+    noti->transpose = 0;
+
+    noti->clockdivide_new = false;
+    noti->clockdivide = 0;
+
+    noti->mute_new = false;
+    noti->mute = 0;
+
 
 }
 
@@ -183,7 +203,17 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
             seq->tick = 0;
         }
 
+        // if we've crossed a step boundary, set a notification
+        if (seq->noti_enable) {
+            if ((seq->tick % seq->tps) == 0) {
+                seq->noti.playhead = seq->tick / seq->tps;
+                seq->noti.playhead_new = true;
+            }
+        }
+
     }
+
+    
 
     if (++seq->idiv >= seq->div) seq->idiv = 0; // clock divide
 
@@ -315,6 +345,11 @@ void _sequence_set_transpose_now(sq_sequence_t *seq, int transpose) {
 
     seq->transpose = transpose;
 
+    if (seq->noti_enable) {
+        seq->noti.transpose = transpose;
+        seq->noti.transpose_new = true;
+    }
+
 }
 
 void sq_sequence_set_playhead(sq_sequence_t *seq, int ph) {
@@ -345,6 +380,11 @@ void _sequence_set_playhead_now(sq_sequence_t *seq, int playhead) {
     /* this function should only be called from within the audio callback */
 
     seq->tick = playhead * seq->tps;
+
+    if (seq->noti_enable) {
+        seq->noti.playhead = playhead;
+        seq->noti.playhead_new = true;
+    }
 
 }
 
@@ -378,6 +418,11 @@ void _sequence_set_clockdivide_now(sq_sequence_t *seq, int div) {
     seq->div = div;
     seq->idiv = 0;
 
+    if (seq->noti_enable) {
+        seq->noti.clockdivide = div;
+        seq->noti.clockdivide_new = true;
+    }
+
 }
 
 void sq_sequence_set_mute(sq_sequence_t *seq, bool mute) {
@@ -403,6 +448,11 @@ void _sequence_set_mute_now(sq_sequence_t *seq, bool mute) {
     /* this function should only be called from within the audio callback */
 
     seq->mute = mute;
+
+    if (seq->noti_enable) {
+        seq->noti.mute = mute;
+        seq->noti.mute_new = true;
+    }
 
 }
 
@@ -451,6 +501,61 @@ void sq_sequence_pprint(sq_sequence_t *seq) {
 
     }
 
+}
+
+void sq_sequence_set_notifications(sq_sequence_t *seq, bool enable) {
+
+    seq->noti_enable = enable;
+
+}
+
+bool sq_sequence_read_new_playhead(sq_sequence_t *seq, int *val) {
+
+    bool new;
+
+    if ((new = seq->noti.playhead_new)) {
+        *val = seq->noti.playhead;
+        seq->noti.playhead_new = false;
+    }
+
+    return new;
+
+}
+
+bool sq_sequence_read_new_transpose(sq_sequence_t *seq, int *val) {
+
+    bool new;
+
+    if ((new = seq->noti.transpose_new)) {
+        *val = seq->noti.transpose;
+        seq->noti.transpose_new = false;
+    }
+
+    return new;
+}
+
+bool sq_sequence_read_new_clockdivide(sq_sequence_t *seq, int *val) {
+
+    bool new;
+
+    if ((new = seq->noti.clockdivide_new)) {
+        *val = seq->noti.clockdivide;
+        seq->noti.clockdivide_new = false;
+    }
+
+    return new;
+}
+
+bool sq_sequence_read_new_mute(sq_sequence_t *seq, bool *val) {
+
+    bool new;
+
+    if ((new = seq->noti.mute_new)) {
+        *val = seq->noti.mute;
+        seq->noti.mute_new = false;
+    }
+
+    return new;
 }
 
 // read-only getters don't need to use ringbuffers

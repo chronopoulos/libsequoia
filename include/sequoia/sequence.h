@@ -50,6 +50,22 @@ typedef struct {
 
 typedef struct {
 
+    bool playhead_new;
+    int playhead;
+
+    bool transpose_new;
+    int transpose;
+
+    bool clockdivide_new;
+    int clockdivide;
+
+    bool mute_new;
+    bool mute;
+
+} sq_sequence_noti_t;
+
+typedef struct {
+
     // these are touched by both the audio and the UI thread
     char name[MAX_SEQ_NAME_LEN + 1];
     int transpose;
@@ -74,9 +90,13 @@ typedef struct {
     int div, idiv;
     bool mute;
 
+    sq_sequence_noti_t noti;
+    bool noti_enable;
+
 } sq_sequence_t;
 
 void sq_sequence_init(sq_sequence_t*, int, int);
+void sq_sequence_noti_init(sq_sequence_noti_t*);
 
 void _sequence_tick(sq_sequence_t*, jack_nframes_t);
 void _sequence_reset_now(sq_sequence_t*);
@@ -103,6 +123,12 @@ void sq_sequence_set_mute(sq_sequence_t*, bool);
 void _sequence_set_mute_now(sq_sequence_t*, bool);
 
 void sq_sequence_pprint(sq_sequence_t*);
+
+void sq_sequence_set_notifications(sq_sequence_t*, bool);
+bool sq_sequence_read_new_playhead(sq_sequence_t*, int*);
+bool sq_sequence_read_new_transpose(sq_sequence_t*, int*);
+bool sq_sequence_read_new_clockdivide(sq_sequence_t*, int*);
+bool sq_sequence_read_new_mute(sq_sequence_t*, bool*);
 
 int sq_sequence_get_nsteps(sq_sequence_t*);
 
