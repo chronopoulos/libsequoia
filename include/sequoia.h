@@ -22,10 +22,18 @@
 #ifndef SEQUOIA_H
 #define SEQUOIA_H
 
+#ifdef __cplusplus
+extern "C"{
+#endif 
+
 #include "sequoia/session.h"
 #include "sequoia/sequence.h"
 #include "sequoia/trigger.h"
 #include "sequoia/outport.h"
 #include "sequoia/inport.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
