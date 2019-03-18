@@ -152,10 +152,9 @@ void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
     srandom(time(NULL));
 
     // open jack client
-    sesh->jack_client = jack_client_open(client_name, JackNullOption, NULL);
-    
-	if (sesh->jack_client == 0) {
-        fprintf(stderr, "JACK server not running?\n");
+    sesh->jack_client = jack_client_open(client_name, JackNoStartServer, NULL);
+	if (sesh->jack_client == NULL) {
+        fprintf(stderr, "sequoia failed to open JACK client\n");
         exit(1);
 	}
 
