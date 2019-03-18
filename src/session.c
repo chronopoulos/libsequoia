@@ -98,17 +98,19 @@ static int _process(jack_nframes_t nframes, void *arg) {
         _inport_serve(sesh->inports[i], nframes);
     }
 
+    // prepare the outports. need to do this once per port, per processing
+    // callback - EVEN IF the session isn't running. otherwise, stopping the
+    // sequencer while an outport buffer has a note-on in it will lead to
+    // rapidly repeating (machine-gun) note events
+    sq_outport_t *outport;
+    for (int i=0; i<sesh->noutports; i++) {
+        outport = sesh->outports[i];
+        outport->buf = jack_port_get_buffer(outport->jack_port, nframes);
+        jack_midi_clear_buffer(outport->buf);
+    }
+
     jack_nframes_t nframes_left, frame_inc;
     if (sesh->go) {
-
-        // prepare the outports 
-        // need to do this once per port, per processing callback
-        sq_outport_t *outport;
-        for (int i=0; i<sesh->noutports; i++) {
-            outport = sesh->outports[i];
-            outport->buf = jack_port_get_buffer(outport->jack_port, nframes);
-            jack_midi_clear_buffer(outport->buf);
-        }
 
         nframes_left = nframes;
         while(nframes_left) {
