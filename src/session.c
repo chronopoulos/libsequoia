@@ -241,10 +241,6 @@ void sq_session_start(sq_session_t *sesh) {
 
     if (!sesh->is_playing) {
 
-        for (int i=0; i<sesh->nseqs; i++) {
-            sesh->seqs[i]->is_playing = true;
-        }
-
         _session_ctrl_msg_t msg;
         msg.param = SESSION_GO;
         msg.vb = true;
@@ -266,10 +262,6 @@ void sq_session_stop(sq_session_t *sesh) {
         msg.vb = false;
 
         _session_ringbuffer_write(sesh, &msg);
-
-        for (int i=0; i<sesh->nseqs; i++) {
-            sesh->seqs[i]->is_playing = false;
-        }
 
         sesh->is_playing = false;
 
