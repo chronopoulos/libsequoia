@@ -153,6 +153,9 @@ void _sequence_reset_now(sq_sequence_t *seq) {
     seq->tick = 0;
     seq->ridx_off = 0;
 
+    seq->noti.playhead = 0;
+    seq->noti.playhead_new = true;
+
 }
 
 void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
