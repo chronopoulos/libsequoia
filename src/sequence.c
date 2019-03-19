@@ -153,8 +153,10 @@ void _sequence_reset_now(sq_sequence_t *seq) {
     seq->tick = 0;
     seq->ridx_off = 0;
 
-    seq->noti.playhead = 0;
-    seq->noti.playhead_new = true;
+    if (seq->noti_enable) {
+        seq->noti.playhead = 0;
+        seq->noti.playhead_new = true;
+    }
 
 }
 
