@@ -176,7 +176,7 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
     if (seq->idiv == 0) { // clock divide
 
         // handle any triggers from the microgrid
-        if (!seq->mute) {
+        if (!seq->mute && seq->outport) {
 
             if ((trig = seq->microgrid[seq->tick])) { // if non-NULL
 
@@ -224,9 +224,11 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
 
     // handle any events in buf_off
     if (seq->buf_off[seq->ridx_off][0]) {  // if status byte != 0
-        midi_msg_write_ptr = jack_midi_event_reserve(seq->outport->buf, idx, 3);
-        memcpy(midi_msg_write_ptr, seq->buf_off[seq->ridx_off], 3);
-        seq->buf_off[seq->ridx_off][0] = 0;  // clear this event
+        if (seq->outport->buf) {
+            midi_msg_write_ptr = jack_midi_event_reserve(seq->outport->buf, idx, 3);
+            memcpy(midi_msg_write_ptr, seq->buf_off[seq->ridx_off], 3);
+            seq->buf_off[seq->ridx_off][0] = 0;  // clear this event
+        }
     }
 
     // increment ridx_off
