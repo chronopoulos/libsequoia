@@ -29,8 +29,8 @@
 #define INPORT_MAX_NAME_LEN 255
 #define INPORT_MAX_NSEQ 16
 
-enum inport_type {INPORT_TRANSPOSE, INPORT_PLAYHEAD, INPORT_CLOCKDIVIDE, INPORT_DIRECTION,
-                    INPORT_MUTE, INPORT_FIRST, INPORT_LAST};
+enum inport_type {INPORT_NONE, INPORT_TRANSPOSE, INPORT_PLAYHEAD, INPORT_CLOCKDIVIDE,
+                    INPORT_DIRECTION, INPORT_MUTE, INPORT_FIRST, INPORT_LAST};
 
 typedef struct {
 
@@ -45,7 +45,8 @@ typedef struct {
 
 } sq_inport_t;
 
-void sq_inport_init(sq_inport_t*, enum inport_type, const char*);
+void sq_inport_init(sq_inport_t*, const char*);
+void sq_inport_set_type(sq_inport_t*, enum inport_type);
 void _inport_add_sequence_now(sq_inport_t*, sq_sequence_t*);
 void _inport_serve(sq_inport_t*, jack_nframes_t);
 

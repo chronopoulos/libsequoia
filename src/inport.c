@@ -24,9 +24,10 @@
 
 #include "sequoia.h"
 
-void sq_inport_init(sq_inport_t *inport, enum inport_type type, const char *name) {
+void sq_inport_init(sq_inport_t *inport, const char *name) {
 
-    inport->type = type;
+    inport->type = INPORT_NONE;
+
 
     if (strlen(name) <= INPORT_MAX_NAME_LEN) {
         strcpy(inport->name, name);
@@ -39,6 +40,12 @@ void sq_inport_init(sq_inport_t *inport, enum inport_type type, const char *name
     inport->buf = NULL;
 
     inport->nseqs = 0;
+
+}
+
+void sq_inport_set_type(sq_inport_t *inport, enum inport_type type) {
+
+    inport->type = type;
 
 }
 
@@ -71,14 +78,16 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
         if (ev.buffer[0] == 144) {
 
             switch (inport->type) {
-                // bipolar mapping centered at 60
+                case INPORT_NONE:
+                    break;
                 case INPORT_TRANSPOSE:
+                    // bipolar mapping centered at 60
                     for (int i=0; i<inport->nseqs; i++) {
                         _sequence_set_transpose_now(inport->seqs[i], ev.buffer[1] - 60);
                     }
                     break;
                 case INPORT_PLAYHEAD:
-                // distance from 60 is taken modulo the sequence length
+                    // distance from 60 is taken modulo the sequence length
                     for (int i=0; i<inport->nseqs; i++) {
                         iarg = (ev.buffer[1] - 60) % inport->seqs[i]->nsteps;
                         _sequence_set_playhead_now(inport->seqs[i], iarg);
@@ -111,6 +120,7 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
                     // this should never happen
                     fprintf(stderr, "inport has unknown type: %d\n", inport->type);
                     break;
+
             }
 
         }
