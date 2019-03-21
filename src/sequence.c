@@ -218,8 +218,6 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
 
     }
 
-    
-
     if (++seq->idiv >= seq->div) seq->idiv = 0; // clock divide
 
     // handle any events in buf_off
@@ -386,7 +384,8 @@ void _sequence_set_playhead_now(sq_sequence_t *seq, int playhead) {
 
     /* this function should only be called from within the audio callback */
 
-    seq->tick = playhead * seq->tps;
+    int stick = seq->tick % seq->tps;
+    seq->tick = playhead * seq->tps + stick;
 
     if (seq->noti_enable) {
         seq->noti.playhead = playhead;

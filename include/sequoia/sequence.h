@@ -80,8 +80,8 @@ typedef struct {
     // this is only touched by UI
     bool is_playing;
 
+    int tps; // ticks per step
     int nsteps;
-    int tps;
     int nticks;
     int tick;
 
