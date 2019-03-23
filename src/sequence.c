@@ -164,10 +164,10 @@ void sq_sequence_noti_init(sq_sequence_noti_t *noti) {
 void _sequence_reset_now(sq_sequence_t *seq) {
 
     seq->idiv = 0;
-    seq->tick = 0;
+    seq->tick = seq->first * seq->tps;
 
     if (seq->noti_enable) {
-        seq->noti.playhead = 0;
+        seq->noti.playhead = seq->first;
         seq->noti.playhead_new = true;
     }
 
