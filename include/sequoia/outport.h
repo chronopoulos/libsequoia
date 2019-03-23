@@ -29,12 +29,15 @@
 typedef struct {
 
     char name[OUTPORT_MAX_NAME_LEN + 1];
+
+    jack_client_t *jack_client;
     jack_port_t *jack_port;
     void *buf;
 
 } sq_outport_t;
 
 void sq_outport_init(sq_outport_t*, const char*);
+void sq_outport_set_name(sq_outport_t*, const char*);
 char *sq_outport_get_name(sq_outport_t*);
 
 #endif

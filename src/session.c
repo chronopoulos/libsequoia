@@ -204,6 +204,7 @@ int sq_session_register_outport(sq_session_t *sesh, sq_outport_t *outport) {
         return -1;
     }
 
+    outport->jack_client = sesh->jack_client;
     outport->jack_port = jack_port;
 
     sesh->outports[sesh->noutports] = outport;

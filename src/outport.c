@@ -23,7 +23,7 @@
 
 #include "sequoia.h"
 
-void sq_outport_init(sq_outport_t *outport, const char *name) {
+void _outport_sanitize_name(sq_outport_t *outport, const char *name) {
 
     if (strlen(name) <= OUTPORT_MAX_NAME_LEN) {
         strcpy(outport->name, name);
@@ -32,9 +32,25 @@ void sq_outport_init(sq_outport_t *outport, const char *name) {
         outport->name[OUTPORT_MAX_NAME_LEN] = '\0';
     }
 
+}
 
+void sq_outport_init(sq_outport_t *outport, const char *name) {
+
+    _outport_sanitize_name(outport, name);
+
+    outport->jack_client = NULL;
     outport->jack_port = NULL;
     outport->buf = NULL;
+
+}
+
+void sq_outport_set_name(sq_outport_t *outport, const char *name) {
+
+    if (outport->jack_client) { // if registered
+        jack_port_rename(outport->jack_client, outport->jack_port, name);
+    }
+
+    _outport_sanitize_name(outport, name); 
 
 }
 
