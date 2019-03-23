@@ -99,6 +99,7 @@ void sq_sequence_init(sq_sequence_t*, int, int);
 void sq_sequence_noti_init(sq_sequence_noti_t*);
 
 void _sequence_tick(sq_sequence_t*, jack_nframes_t);
+void _sequence_serve_off_buffer(sq_sequence_t*, jack_nframes_t);
 void _sequence_reset_now(sq_sequence_t*);
 
 void sq_sequence_set_name(sq_sequence_t*, const char*);

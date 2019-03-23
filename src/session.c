@@ -110,26 +110,26 @@ static int _process(jack_nframes_t nframes, void *arg) {
     }
 
     jack_nframes_t nframes_left, frame_inc;
-    if (sesh->go) {
 
-        nframes_left = nframes;
-        while(nframes_left) {
+    nframes_left = nframes;
+    while(nframes_left) {
 
-            // if we're on a tick boundary, call _tick() on each sequence
-            if (sesh->frame == 0) {
-                for (int i=0; i<sesh->nseqs; i++) {
+        // if we're on a tick boundary, call _tick() on each sequence
+        if (sesh->frame == 0) {
+            for (int i=0; i<sesh->nseqs; i++) {
+                if (sesh->go) {
                     _sequence_tick(sesh->seqs[i], nframes - nframes_left);
                 }
+                _sequence_serve_off_buffer(sesh->seqs[i], nframes - nframes_left);
             }
+        }
 
-            // increment to the next tick, or as far as we can now
-            frame_inc = _min_nframes(sesh->fpt - sesh->frame, nframes_left);
-            sesh->frame += frame_inc;
-            nframes_left -= frame_inc;
-            if (sesh->frame == sesh->fpt) {
-                sesh->frame = 0;
-            }
-
+        // increment to the next tick, or as far as we can now
+        frame_inc = _min_nframes(sesh->fpt - sesh->frame, nframes_left);
+        sesh->frame += frame_inc;
+        nframes_left -= frame_inc;
+        if (sesh->frame == sesh->fpt) {
+            sesh->frame = 0;
         }
 
     }

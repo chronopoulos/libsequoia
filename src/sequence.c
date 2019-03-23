@@ -126,6 +126,7 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
     sq_sequence_noti_init(&seq->noti);
     seq->noti_enable = false;
 
+    seq->ridx_off = 0;
     _sequence_reset_now(seq);
 
 }
@@ -151,7 +152,6 @@ void _sequence_reset_now(sq_sequence_t *seq) {
 
     seq->idiv = 0;
     seq->tick = 0;
-    seq->ridx_off = 0;
 
     if (seq->noti_enable) {
         seq->noti.playhead = 0;
@@ -219,6 +219,12 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
     }
 
     if (++seq->idiv >= seq->div) seq->idiv = 0; // clock divide
+
+}
+
+void _sequence_serve_off_buffer(sq_sequence_t *seq, jack_nframes_t idx) {
+
+    unsigned char *midi_msg_write_ptr;
 
     // handle any events in buf_off
     if (seq->buf_off[seq->ridx_off][0]) {  // if status byte != 0
