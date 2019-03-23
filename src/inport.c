@@ -24,10 +24,7 @@
 
 #include "sequoia.h"
 
-void sq_inport_init(sq_inport_t *inport, const char *name) {
-
-    inport->type = INPORT_NONE;
-
+void _inport_sanitize_name(sq_inport_t *inport, const char *name) {
 
     if (strlen(name) <= INPORT_MAX_NAME_LEN) {
         strcpy(inport->name, name);
@@ -36,10 +33,29 @@ void sq_inport_init(sq_inport_t *inport, const char *name) {
         inport->name[INPORT_MAX_NAME_LEN] = '\0';
     }
 
+}
+
+void sq_inport_init(sq_inport_t *inport, const char *name) {
+
+    inport->type = INPORT_NONE;
+
+    _inport_sanitize_name(inport, name);
+
+    inport->jack_client = NULL;
     inport->jack_port = NULL;
     inport->buf = NULL;
 
     inport->nseqs = 0;
+
+}
+
+void sq_inport_set_name(sq_inport_t *inport, const char *name) {
+
+    if (inport->jack_client) { // if registered
+        jack_port_rename(inport->jack_client, inport->jack_port, name);
+    }
+
+    _inport_sanitize_name(inport, name); 
 
 }
 

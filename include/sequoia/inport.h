@@ -37,6 +37,8 @@ typedef struct {
     enum inport_type type;
 
     char name[INPORT_MAX_NAME_LEN + 1];
+
+    jack_client_t *jack_client;
     jack_port_t *jack_port;
     void *buf;
 
@@ -46,6 +48,7 @@ typedef struct {
 } sq_inport_t;
 
 void sq_inport_init(sq_inport_t*, const char*);
+void sq_inport_set_name(sq_inport_t*, const char*);
 void sq_inport_set_type(sq_inport_t*, enum inport_type);
 void _inport_add_sequence_now(sq_inport_t*, sq_sequence_t*);
 void _inport_serve(sq_inport_t*, jack_nframes_t);

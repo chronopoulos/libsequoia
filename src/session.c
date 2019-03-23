@@ -231,6 +231,7 @@ int sq_session_register_inport(sq_session_t *sesh, sq_inport_t *inport) {
         return -1;
     }
 
+    inport->jack_client = sesh->jack_client;
     inport->jack_port = jack_port;
 
     sesh->inports[sesh->ninports] = inport;
