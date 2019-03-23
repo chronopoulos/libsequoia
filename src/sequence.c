@@ -69,6 +69,10 @@ void _sequence_serve_ctrl_msgs(sq_sequence_t *seq) {
             _sequence_set_transpose_now(seq, msg.vi);
         } else if (msg.param == SEQUENCE_PH) {
             _sequence_set_playhead_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_FIRST) {
+            _sequence_set_first_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_LAST) {
+            _sequence_set_last_now(seq, msg.vi);
         } else if (msg.param == SEQUENCE_DIV) {
             _sequence_set_clockdivide_now(seq, msg.vi);
         } else if (msg.param == SEQUENCE_MUTE) {
@@ -123,6 +127,9 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
 
     seq->mute = false;
 
+    seq->first = 0;
+    seq->last = seq->nsteps - 1;
+
     sq_sequence_noti_init(&seq->noti);
     seq->noti_enable = false;
 
@@ -135,6 +142,12 @@ void sq_sequence_noti_init(sq_sequence_noti_t *noti) {
 
     noti->playhead_new = false;
     noti->playhead = 0;
+
+    noti->first_new = false;
+    noti->first = 0;
+
+    noti->last_new = false;
+    noti->last = 0;
 
     noti->transpose_new = false;
     noti->transpose = 0;
@@ -208,12 +221,22 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
             seq->tick = 0;
         }
 
-        // if we've crossed a step boundary, set a notification
-        if (seq->noti_enable) {
-            if ((seq->tick % seq->tps) == 0) {
-                seq->noti.playhead = seq->tick / seq->tps;
+        // if we've crossed a step boundary..
+        if ((seq->tick % seq->tps) == 0) {
+
+            // handle first/last
+            int step = seq->tick / seq->tps;
+            if (((seq->last+1) % seq->nsteps) == step) {
+                step = seq->first;
+                seq->tick = step * seq->tps;
+            }
+
+            // and send a notification
+            if (seq->noti_enable) {
+                seq->noti.playhead = step;
                 seq->noti.playhead_new = true;
             }
+
         }
 
     }
@@ -405,6 +428,75 @@ void _sequence_set_playhead_now(sq_sequence_t *seq, int playhead) {
 
 }
 
+void sq_sequence_set_first(sq_sequence_t *seq, int first) {
+
+    if ( (first < 0) || (first >= seq->nticks) ) {
+        fprintf(stderr, "first value out of range: %d\n", first);
+        return;
+    }
+
+    if (seq->is_playing) {
+
+        _sequence_ctrl_msg_t msg;
+        msg.param = SEQUENCE_FIRST;
+        msg.vi = first;
+
+        _sequence_ringbuffer_write(seq, &msg);
+
+    } else {
+
+        _sequence_set_first_now(seq, first);
+
+    }
+
+}
+
+void _sequence_set_first_now(sq_sequence_t *seq, int first) {
+
+    seq->first = first;
+
+    if (seq->noti_enable) {
+        seq->noti.first = first;
+        seq->noti.first_new = true;
+    }
+
+
+}
+
+void sq_sequence_set_last(sq_sequence_t *seq, int last) {
+
+    if ( (last < 0) || (last >= seq->nticks) ) {
+        fprintf(stderr, "last value out of range: %d\n", last);
+        return;
+    }
+
+    if (seq->is_playing) {
+
+        _sequence_ctrl_msg_t msg;
+        msg.param = SEQUENCE_LAST;
+        msg.vi = last;
+
+        _sequence_ringbuffer_write(seq, &msg);
+
+    } else {
+
+        _sequence_set_last_now(seq, last);
+
+    }
+
+}
+
+void _sequence_set_last_now(sq_sequence_t *seq, int last) {
+
+    seq->last = last;
+
+    if (seq->noti_enable) {
+        seq->noti.last = last;
+        seq->noti.last_new = true;
+    }
+
+}
+
 void sq_sequence_set_clockdivide(sq_sequence_t *seq, int div) {
 
     if (div < 1) {
@@ -511,7 +603,6 @@ void sq_sequence_pprint(sq_sequence_t *seq) {
                 charCount = 0;
             }
 
-
         }
 
         if (!newLineLast) printf("\n");
@@ -533,6 +624,32 @@ bool sq_sequence_read_new_playhead(sq_sequence_t *seq, int *val) {
     if ((new = seq->noti.playhead_new)) {
         *val = seq->noti.playhead;
         seq->noti.playhead_new = false;
+    }
+
+    return new;
+
+}
+
+bool sq_sequence_read_new_first(sq_sequence_t *seq, int *val) {
+
+    bool new;
+
+    if ((new = seq->noti.first_new)) {
+        *val = seq->noti.first;
+        seq->noti.first_new = false;
+    }
+
+    return new;
+
+}
+
+bool sq_sequence_read_new_last(sq_sequence_t *seq, int *val) {
+
+    bool new;
+
+    if ((new = seq->noti.last_new)) {
+        *val = seq->noti.last;
+        seq->noti.last_new = false;
     }
 
     return new;

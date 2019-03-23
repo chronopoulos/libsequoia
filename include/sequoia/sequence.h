@@ -34,7 +34,7 @@
 typedef jack_midi_data_t midi_packet[3]; // equivalent to 3 unsigned chars
 
 enum _sequence_param {SEQUENCE_SET_TRIG, SEQUENCE_CLEAR_TRIG, SEQUENCE_TRANSPOSE, SEQUENCE_PH,
-                        SEQUENCE_DIV, SEQUENCE_MUTE};
+                        SEQUENCE_DIV, SEQUENCE_MUTE, SEQUENCE_FIRST, SEQUENCE_LAST};
 
 typedef struct {
 
@@ -52,6 +52,12 @@ typedef struct {
 
     bool playhead_new;
     int playhead;
+
+    bool first_new;
+    int first;
+
+    bool last_new;
+    int last;
 
     bool transpose_new;
     int transpose;
@@ -90,6 +96,8 @@ typedef struct {
     int div, idiv;
     bool mute;
 
+    int first, last;
+
     sq_sequence_noti_t noti;
     bool noti_enable;
 
@@ -117,6 +125,12 @@ void _sequence_set_transpose_now(sq_sequence_t*, int);
 void sq_sequence_set_playhead(sq_sequence_t*, int);
 void _sequence_set_playhead_now(sq_sequence_t*, int);
 
+void sq_sequence_set_first(sq_sequence_t*, int);
+void _sequence_set_first_now(sq_sequence_t*, int);
+
+void sq_sequence_set_last(sq_sequence_t*, int);
+void _sequence_set_last_now(sq_sequence_t*, int);
+
 void sq_sequence_set_clockdivide(sq_sequence_t*, int);
 void _sequence_set_clockdivide_now(sq_sequence_t*, int);
 
@@ -127,6 +141,8 @@ void sq_sequence_pprint(sq_sequence_t*);
 
 void sq_sequence_set_notifications(sq_sequence_t*, bool);
 bool sq_sequence_read_new_playhead(sq_sequence_t*, int*);
+bool sq_sequence_read_new_first(sq_sequence_t*, int*);
+bool sq_sequence_read_new_last(sq_sequence_t*, int*);
 bool sq_sequence_read_new_transpose(sq_sequence_t*, int*);
 bool sq_sequence_read_new_clockdivide(sq_sequence_t*, int*);
 bool sq_sequence_read_new_mute(sq_sequence_t*, bool*);
