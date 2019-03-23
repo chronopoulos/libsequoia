@@ -287,13 +287,18 @@ void sq_sequence_set_trig(sq_sequence_t *seq, int step_index, sq_trigger_t *trig
 
 void _sequence_set_trig_now(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
 
-    /* this function should only be called from within the audio callback */
+    int tick_index_old, tick_index_new;
+
+    // clear the old index
+    tick_index_old = _get_tick_index_trig(seq, step_index, seq->trigs + step_index);
+    seq->microgrid[tick_index_old] = NULL;
 
     memcpy(seq->trigs + step_index, trig, sizeof(sq_trigger_t));
-    int tick_index;
+
     if (trig->type == TRIG_NOTE) {
-        tick_index = _get_tick_index_trig(seq, step_index, trig);
-        seq->microgrid[tick_index] = seq->trigs + step_index;
+        // write the new index
+        tick_index_new = _get_tick_index_trig(seq, step_index, trig);
+        seq->microgrid[tick_index_new] = seq->trigs + step_index;
     }
 
 }
