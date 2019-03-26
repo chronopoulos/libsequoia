@@ -150,7 +150,7 @@ static PyObject *Py_sequence_set_outport(Py_sequence *self, PyObject *args) {
         return NULL;
     }
 
-    sq_sequence_set_outport(&self->seq, &((Py_port*)object)->port);
+    sq_sequence_set_outport(&self->seq, &((Py_outport*)object)->outport);
 
     Py_RETURN_NONE;
 

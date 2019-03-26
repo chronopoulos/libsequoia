@@ -31,7 +31,7 @@ static PyObject *initsequoia_worker(void) {
         return m;
     }
 
-    if (PyType_Ready(&Py_portType) < 0) {
+    if (PyType_Ready(&Py_outportType) < 0) {
         return m;
     }
 
@@ -50,11 +50,8 @@ static PyObject *initsequoia_worker(void) {
     Py_INCREF (&Py_triggerType);
     PyModule_AddObject (m, "trigger", (PyObject *) &Py_triggerType);
 
-    Py_INCREF (&Py_portType);
-    PyModule_AddObject (m, "port", (PyObject *) &Py_portType);
-
-    PyModule_AddIntMacro(m, PORT_IN);
-    PyModule_AddIntMacro(m, PORT_OUT);
+    Py_INCREF (&Py_outportType);
+    PyModule_AddObject (m, "outport", (PyObject *) &Py_outportType);
 
     return m;
 

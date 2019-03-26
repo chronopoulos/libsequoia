@@ -77,7 +77,7 @@ static PyObject *Py_session_get_name(Py_session *self, PyObject *unused) {
 
 }
 
-static PyObject *Py_session_register_port(Py_session *self, PyObject *args) {
+static PyObject *Py_session_register_outport(Py_session *self, PyObject *args) {
 
     PyObject *object;
 
@@ -85,7 +85,7 @@ static PyObject *Py_session_register_port(Py_session *self, PyObject *args) {
         return NULL;
     }
 
-    sq_session_register_port(&self->sesh, &((Py_port*)object)->port);
+    sq_session_register_outport(&self->sesh, &((Py_outport*)object)->outport);
 
     Py_RETURN_NONE;
 
@@ -143,7 +143,7 @@ static PyMethodDef Py_session_methods[] = {
     {"start", (PyCFunction) Py_session_start, METH_NOARGS, NULL},
     {"stop", (PyCFunction) Py_session_stop, METH_NOARGS, NULL},
     {"get_name", (PyCFunction) Py_session_get_name, METH_NOARGS, NULL},
-    {"register_port", (PyCFunction) Py_session_register_port, METH_VARARGS, NULL},
+    {"register_outport", (PyCFunction) Py_session_register_outport, METH_VARARGS, NULL},
     {"add_sequence", (PyCFunction) Py_session_add_sequence, METH_VARARGS, NULL},
     {"rm_sequence", (PyCFunction) Py_session_rm_sequence, METH_VARARGS, NULL},
     {"get_tps", (PyCFunction) Py_session_get_tps, METH_VARARGS, NULL},
