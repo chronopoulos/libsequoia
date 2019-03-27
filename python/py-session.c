@@ -5,7 +5,9 @@ static int Py_session_init(Py_session *self, PyObject *args, PyObject *kwds) {
     char *name;
     int tps;
 
-    PyArg_ParseTuple(args, "si", &name, &tps);
+    if (!PyArg_ParseTuple(args, "si", &name, &tps)) {
+        return -1;
+    }
 
     sq_session_init(&self->sesh, name, tps);
 
