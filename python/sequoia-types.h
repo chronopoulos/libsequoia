@@ -34,8 +34,17 @@ typedef struct {
 
 } Py_outport;
 
+typedef struct {
+
+    PyObject_HEAD
+
+    sq_inport_t inport;
+
+} Py_inport;
+
 extern PyTypeObject Py_sessionType;
 extern PyTypeObject Py_sequenceType;
 extern PyTypeObject Py_triggerType;
 extern PyTypeObject Py_outportType;
+extern PyTypeObject Py_inportType;
 

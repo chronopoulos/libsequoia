@@ -35,6 +35,30 @@ static PyObject *initsequoia_worker(void) {
         return m;
     }
 
+    // inport needs special handling for class attributes
+    if ( !(Py_inportType.tp_dict = PyDict_New()) ) {
+        return m;
+    }
+    if (PyType_Ready(&Py_inportType) < 0) {
+        return m;
+    }
+    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("NONE"),
+                    PyInt_FromLong(INPORT_NONE));
+    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("TRANSPOSE"),
+                    PyInt_FromLong(INPORT_TRANSPOSE));
+    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("PLAYHEAD"),
+                    PyInt_FromLong(INPORT_PLAYHEAD));
+    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("CLOCKDIVIDE"),
+                    PyInt_FromLong(INPORT_CLOCKDIVIDE));
+    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("DIRECTION"),
+                    PyInt_FromLong(INPORT_DIRECTION));
+    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("MUTE"),
+                    PyInt_FromLong(INPORT_MUTE));
+    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("FIRST"),
+                    PyInt_FromLong(INPORT_FIRST));
+    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("LAST"),
+                    PyInt_FromLong(INPORT_LAST));
+
 #if PY_MAJOR_VERSION >= 3
     m = PyModule_Create(&moduledef);
 #else
@@ -52,6 +76,9 @@ static PyObject *initsequoia_worker(void) {
 
     Py_INCREF (&Py_outportType);
     PyModule_AddObject (m, "outport", (PyObject *) &Py_outportType);
+
+    Py_INCREF (&Py_inportType);
+    PyModule_AddObject (m, "inport", (PyObject *) &Py_inportType);
 
     return m;
 
