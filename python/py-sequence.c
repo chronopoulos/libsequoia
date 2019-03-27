@@ -1,6 +1,6 @@
 #include "sequoia-types.h"
 
-static int Py_sequence_init(Py_sequence *self, PyObject *args, PyObject *kwds) {
+static int Sequence_init(Sequence_Data *self, PyObject *args, PyObject *kwds) {
 
     int nsteps, tps;
 
@@ -14,21 +14,21 @@ static int Py_sequence_init(Py_sequence *self, PyObject *args, PyObject *kwds) {
 
 }
 
-static PyObject *Py_sequence_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+static PyObject *Sequence_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
-    Py_sequence *self;
-    self = (Py_sequence *) type->tp_alloc(type, 0);
+    Sequence_Data *self;
+    self = (Sequence_Data *) type->tp_alloc(type, 0);
     return (PyObject *) self;
 
 }
 
-static void Py_sequence_del(Py_sequence *self) {
+static void Sequence_del(Sequence_Data *self) {
 
     Py_TYPE(self)->tp_free((PyObject *) self);
 
 }
 
-static PyObject *Py_sequence_repr(Py_sequence *self, PyObject *unused) {
+static PyObject *Sequence_repr(Sequence_Data *self, PyObject *unused) {
 
     PyObject *result = NULL;
     char result_str[96];
@@ -43,7 +43,7 @@ static PyObject *Py_sequence_repr(Py_sequence *self, PyObject *unused) {
 
 }
 
-static PyObject *Py_sequence_set_name(Py_sequence *self, PyObject *args) {
+static PyObject *Sequence_set_name(Sequence_Data *self, PyObject *args) {
 
     char *name;
 
@@ -57,7 +57,7 @@ static PyObject *Py_sequence_set_name(Py_sequence *self, PyObject *args) {
 
 }
 
-static PyObject *Py_sequence_set_transpose(Py_sequence *self, PyObject *args) {
+static PyObject *Sequence_set_transpose(Sequence_Data *self, PyObject *args) {
 
     int transpose;
 
@@ -71,7 +71,7 @@ static PyObject *Py_sequence_set_transpose(Py_sequence *self, PyObject *args) {
 
 }
 
-static PyObject *Py_sequence_set_playhead(Py_sequence *self, PyObject *args) {
+static PyObject *Sequence_set_playhead(Sequence_Data *self, PyObject *args) {
 
     int ph;
 
@@ -85,7 +85,7 @@ static PyObject *Py_sequence_set_playhead(Py_sequence *self, PyObject *args) {
 
 }
 
-static PyObject *Py_sequence_set_clockdivide(Py_sequence *self, PyObject *args) {
+static PyObject *Sequence_set_clockdivide(Sequence_Data *self, PyObject *args) {
 
     int div;
 
@@ -99,7 +99,7 @@ static PyObject *Py_sequence_set_clockdivide(Py_sequence *self, PyObject *args) 
 
 }
 
-static PyObject *Py_sequence_set_mute(Py_sequence *self, PyObject *args) {
+static PyObject *Sequence_set_mute(Sequence_Data *self, PyObject *args) {
 
     bool mute;
 
@@ -113,7 +113,7 @@ static PyObject *Py_sequence_set_mute(Py_sequence *self, PyObject *args) {
 
 }
 
-static PyObject *Py_sequence_set_trig(Py_sequence *self, PyObject *args) {
+static PyObject *Sequence_set_trig(Sequence_Data *self, PyObject *args) {
 
     int stepIndex;
     PyObject *object;
@@ -122,13 +122,13 @@ static PyObject *Py_sequence_set_trig(Py_sequence *self, PyObject *args) {
         return NULL;
     }
 
-    sq_sequence_set_trig(&self->seq, stepIndex, &((Py_trigger*)object)->trig);
+    sq_sequence_set_trig(&self->seq, stepIndex, &((Trigger_Data*)object)->trig);
 
     Py_RETURN_NONE;
 
 }
 
-static PyObject *Py_sequence_clear_trig(Py_sequence *self, PyObject *args) {
+static PyObject *Sequence_clear_trig(Sequence_Data *self, PyObject *args) {
 
     int stepIndex;
 
@@ -142,7 +142,7 @@ static PyObject *Py_sequence_clear_trig(Py_sequence *self, PyObject *args) {
 
 }
 
-static PyObject *Py_sequence_set_outport(Py_sequence *self, PyObject *args) {
+static PyObject *Sequence_set_outport(Sequence_Data *self, PyObject *args) {
 
     PyObject *object;
 
@@ -150,13 +150,13 @@ static PyObject *Py_sequence_set_outport(Py_sequence *self, PyObject *args) {
         return NULL;
     }
 
-    sq_sequence_set_outport(&self->seq, &((Py_outport*)object)->outport);
+    sq_sequence_set_outport(&self->seq, &((Outport_Data*)object)->outport);
 
     Py_RETURN_NONE;
 
 }
 
-static PyObject *Py_sequence_pprint(Py_sequence *self, PyObject *args) {
+static PyObject *Sequence_pprint(Sequence_Data *self, PyObject *args) {
 
     sq_sequence_pprint(&self->seq);
 
@@ -164,7 +164,7 @@ static PyObject *Py_sequence_pprint(Py_sequence *self, PyObject *args) {
 
 }
 
-static PyObject *Py_sequence_get_nsteps(Py_sequence *self, PyObject *args) {
+static PyObject *Sequence_get_nsteps(Sequence_Data *self, PyObject *args) {
 
     int result;
     result = sq_sequence_get_nsteps(&self->seq);
@@ -173,33 +173,33 @@ static PyObject *Py_sequence_get_nsteps(Py_sequence *self, PyObject *args) {
 
 }
 
-static PyMethodDef Py_sequence_methods[] = {
+static PyMethodDef Sequence_methods[] = {
 
-    {"set_name", (PyCFunction) Py_sequence_set_name, METH_VARARGS, NULL},
-    {"set_outport", (PyCFunction) Py_sequence_set_outport, METH_VARARGS, NULL},
-    {"set_transpose", (PyCFunction) Py_sequence_set_transpose, METH_VARARGS, NULL},
-    {"set_playhead", (PyCFunction) Py_sequence_set_playhead, METH_VARARGS, NULL},
-    {"set_clockdivide", (PyCFunction) Py_sequence_set_clockdivide, METH_VARARGS, NULL},
-    {"set_mute", (PyCFunction) Py_sequence_set_mute, METH_VARARGS, NULL},
-    {"set_trig", (PyCFunction) Py_sequence_set_trig, METH_VARARGS, NULL},
-    {"clear_trig", (PyCFunction) Py_sequence_clear_trig, METH_VARARGS, NULL},
-    {"pprint", (PyCFunction) Py_sequence_pprint, METH_NOARGS, NULL},
-    {"get_nsteps", (PyCFunction) Py_sequence_get_nsteps, METH_NOARGS, NULL},
+    {"set_name", (PyCFunction) Sequence_set_name, METH_VARARGS, NULL},
+    {"set_outport", (PyCFunction) Sequence_set_outport, METH_VARARGS, NULL},
+    {"set_transpose", (PyCFunction) Sequence_set_transpose, METH_VARARGS, NULL},
+    {"set_playhead", (PyCFunction) Sequence_set_playhead, METH_VARARGS, NULL},
+    {"set_clockdivide", (PyCFunction) Sequence_set_clockdivide, METH_VARARGS, NULL},
+    {"set_mute", (PyCFunction) Sequence_set_mute, METH_VARARGS, NULL},
+    {"set_trig", (PyCFunction) Sequence_set_trig, METH_VARARGS, NULL},
+    {"clear_trig", (PyCFunction) Sequence_clear_trig, METH_VARARGS, NULL},
+    {"pprint", (PyCFunction) Sequence_pprint, METH_NOARGS, NULL},
+    {"get_nsteps", (PyCFunction) Sequence_get_nsteps, METH_NOARGS, NULL},
     {NULL}
 
 };
 
-PyTypeObject Py_sequenceType = {
+PyTypeObject Sequence_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "sequoia.sequence",                 /* tp_name           */
-    sizeof (Py_sequence),             /* tp_basicsize      */
+    sizeof (Sequence_Data),             /* tp_basicsize      */
     0,                            /* tp_itemsize       */
-    (destructor) Py_sequence_del,     /* tp_dealloc        */
+    (destructor) Sequence_del,     /* tp_dealloc        */
     0,                            /* tp_print          */
     0,                            /* tp_getattr        */
     0,                            /* tp_setattr        */
     0,                            /* tp_compare        */
-    (reprfunc) Py_sequence_repr,      /* tp_repr           */
+    (reprfunc) Sequence_repr,      /* tp_repr           */
     0,                            /* tp_as_number      */
     0, //&Py_cvec_tp_as_sequence, /* tp_as_sequence    */
     0,                            /* tp_as_mapping     */
@@ -212,7 +212,7 @@ PyTypeObject Py_sequenceType = {
     Py_TPFLAGS_DEFAULT,           /* tp_flags          */
 
     // TODO
-    //Py_sequence_doc,                  /* tp_doc            */
+    //Sequence_doc,                  /* tp_doc            */
     0,                  /* tp_doc            */
 
     0,                            /* tp_traverse       */
@@ -223,9 +223,9 @@ PyTypeObject Py_sequenceType = {
     0,                            /* tp_iternext       */
 
     // TODO
-    Py_sequence_methods,              /* tp_methods        */
-    //Py_sequence_members,              /* tp_members        */
-    //Py_sequence_getseters,            /* tp_getset         */
+    Sequence_methods,              /* tp_methods        */
+    //Sequence_members,              /* tp_members        */
+    //Sequence_getseters,            /* tp_getset         */
     0,              /* tp_members        */
     0,            /* tp_getset         */
 
@@ -234,9 +234,9 @@ PyTypeObject Py_sequenceType = {
     0,                            /* tp_descr_get      */
     0,                            /* tp_descr_set      */
     0,                            /* tp_dictoffset     */
-    (initproc) Py_sequence_init,      /* tp_init           */
+    (initproc) Sequence_init,      /* tp_init           */
     0,                            /* tp_alloc          */
-    Py_sequence_new,                  /* tp_new            */
+    Sequence_new,                  /* tp_new            */
     0,
     0,
     0,

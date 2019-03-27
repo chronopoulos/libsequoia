@@ -19,44 +19,44 @@ static PyObject *initsequoia_worker(void) {
 
     PyObject *m = NULL;
 
-    if (PyType_Ready(&Py_sessionType) < 0) {
+    if (PyType_Ready(&Session_Type) < 0) {
         return m;
     }
 
-    if (PyType_Ready(&Py_sequenceType) < 0) {
+    if (PyType_Ready(&Sequence_Type) < 0) {
         return m;
     }
 
-    if (PyType_Ready(&Py_triggerType) < 0) {
+    if (PyType_Ready(&Trigger_Type) < 0) {
         return m;
     }
 
-    if (PyType_Ready(&Py_outportType) < 0) {
+    if (PyType_Ready(&Outport_Type) < 0) {
         return m;
     }
 
     // inport needs special handling for class attributes
-    if ( !(Py_inportType.tp_dict = PyDict_New()) ) {
+    if ( !(Inport_Type.tp_dict = PyDict_New()) ) {
         return m;
     }
-    if (PyType_Ready(&Py_inportType) < 0) {
+    if (PyType_Ready(&Inport_Type) < 0) {
         return m;
     }
-    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("NONE"),
+    PyDict_SetItem(Inport_Type.tp_dict, PyString_FromString("NONE"),
                     PyInt_FromLong(INPORT_NONE));
-    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("TRANSPOSE"),
+    PyDict_SetItem(Inport_Type.tp_dict, PyString_FromString("TRANSPOSE"),
                     PyInt_FromLong(INPORT_TRANSPOSE));
-    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("PLAYHEAD"),
+    PyDict_SetItem(Inport_Type.tp_dict, PyString_FromString("PLAYHEAD"),
                     PyInt_FromLong(INPORT_PLAYHEAD));
-    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("CLOCKDIVIDE"),
+    PyDict_SetItem(Inport_Type.tp_dict, PyString_FromString("CLOCKDIVIDE"),
                     PyInt_FromLong(INPORT_CLOCKDIVIDE));
-    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("DIRECTION"),
+    PyDict_SetItem(Inport_Type.tp_dict, PyString_FromString("DIRECTION"),
                     PyInt_FromLong(INPORT_DIRECTION));
-    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("MUTE"),
+    PyDict_SetItem(Inport_Type.tp_dict, PyString_FromString("MUTE"),
                     PyInt_FromLong(INPORT_MUTE));
-    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("FIRST"),
+    PyDict_SetItem(Inport_Type.tp_dict, PyString_FromString("FIRST"),
                     PyInt_FromLong(INPORT_FIRST));
-    PyDict_SetItem(Py_inportType.tp_dict, PyString_FromString("LAST"),
+    PyDict_SetItem(Inport_Type.tp_dict, PyString_FromString("LAST"),
                     PyInt_FromLong(INPORT_LAST));
 
 #if PY_MAJOR_VERSION >= 3
@@ -65,20 +65,20 @@ static PyObject *initsequoia_worker(void) {
     m = Py_InitModule3 ("sequoia", NULL, NULL);
 #endif
 
-    Py_INCREF (&Py_sessionType);
-    PyModule_AddObject (m, "session", (PyObject *) &Py_sessionType);
+    Py_INCREF (&Session_Type);
+    PyModule_AddObject (m, "session", (PyObject *) &Session_Type);
 
-    Py_INCREF (&Py_sequenceType);
-    PyModule_AddObject (m, "sequence", (PyObject *) &Py_sequenceType);
+    Py_INCREF (&Sequence_Type);
+    PyModule_AddObject (m, "sequence", (PyObject *) &Sequence_Type);
 
-    Py_INCREF (&Py_triggerType);
-    PyModule_AddObject (m, "trigger", (PyObject *) &Py_triggerType);
+    Py_INCREF (&Trigger_Type);
+    PyModule_AddObject (m, "trigger", (PyObject *) &Trigger_Type);
 
-    Py_INCREF (&Py_outportType);
-    PyModule_AddObject (m, "outport", (PyObject *) &Py_outportType);
+    Py_INCREF (&Outport_Type);
+    PyModule_AddObject (m, "outport", (PyObject *) &Outport_Type);
 
-    Py_INCREF (&Py_inportType);
-    PyModule_AddObject (m, "inport", (PyObject *) &Py_inportType);
+    Py_INCREF (&Inport_Type);
+    PyModule_AddObject (m, "inport", (PyObject *) &Inport_Type);
 
     return m;
 

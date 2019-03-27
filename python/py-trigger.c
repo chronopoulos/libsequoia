@@ -1,6 +1,6 @@
 #include "sequoia-types.h"
 
-static int Py_trigger_init(Py_trigger *self, PyObject *args, PyObject *kwds) {
+static int Trigger_init(Trigger_Data *self, PyObject *args, PyObject *kwds) {
 
     sq_trigger_init(&self->trig);
 
@@ -8,27 +8,27 @@ static int Py_trigger_init(Py_trigger *self, PyObject *args, PyObject *kwds) {
 
 }
 
-static PyObject *Py_trigger_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+static PyObject *Trigger_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
-    Py_trigger *self;
-    self = (Py_trigger *) type->tp_alloc(type, 0);
+    Trigger_Data *self;
+    self = (Trigger_Data *) type->tp_alloc(type, 0);
     return (PyObject *) self;
 
 }
 
-static void Py_trigger_del(Py_trigger *self) {
+static void Trigger_del(Trigger_Data *self) {
 
     Py_TYPE(self)->tp_free((PyObject *) self);
 
 }
 
-static PyObject *Py_trigger_repr(Py_trigger *self, PyObject *unused) {
+static PyObject *Trigger_repr(Trigger_Data *self, PyObject *unused) {
 
     return PyUnicode_FromString("<sequoia trigger>");
 
 }
 
-static PyObject *Py_trigger_set_null(Py_trigger *self, PyObject *unused) {
+static PyObject *Trigger_set_null(Trigger_Data *self, PyObject *unused) {
 
     sq_trigger_set_null(&self->trig);
 
@@ -36,7 +36,7 @@ static PyObject *Py_trigger_set_null(Py_trigger *self, PyObject *unused) {
 
 }
 
-static PyObject *Py_trigger_set_note(Py_trigger *self, PyObject *args) {
+static PyObject *Trigger_set_note(Trigger_Data *self, PyObject *args) {
 
     int note;
     int velocity;
@@ -52,7 +52,7 @@ static PyObject *Py_trigger_set_note(Py_trigger *self, PyObject *args) {
 
 }
 
-static PyObject *Py_trigger_set_cc(Py_trigger *self, PyObject *args) {
+static PyObject *Trigger_set_cc(Trigger_Data *self, PyObject *args) {
 
     int cc_number;
     int cc_value;
@@ -67,7 +67,7 @@ static PyObject *Py_trigger_set_cc(Py_trigger *self, PyObject *args) {
 
 }
 
-static PyObject *Py_trigger_set_probability(Py_trigger *self, PyObject *args) {
+static PyObject *Trigger_set_probability(Trigger_Data *self, PyObject *args) {
 
     float probability;
 
@@ -81,7 +81,7 @@ static PyObject *Py_trigger_set_probability(Py_trigger *self, PyObject *args) {
 
 }
 
-static PyObject *Py_trigger_set_microtime(Py_trigger *self, PyObject *args) {
+static PyObject *Trigger_set_microtime(Trigger_Data *self, PyObject *args) {
 
     float microtime;
 
@@ -95,28 +95,28 @@ static PyObject *Py_trigger_set_microtime(Py_trigger *self, PyObject *args) {
 
 }
 
-static PyMethodDef Py_trigger_methods[] = {
+static PyMethodDef Trigger_methods[] = {
 
-    {"set_null", (PyCFunction) Py_trigger_set_null, METH_NOARGS, NULL},
-    {"set_note", (PyCFunction) Py_trigger_set_note, METH_VARARGS, NULL},
-    {"set_cc", (PyCFunction) Py_trigger_set_cc, METH_VARARGS, NULL},
-    {"set_probability", (PyCFunction) Py_trigger_set_probability, METH_VARARGS, NULL},
-    {"set_microtime", (PyCFunction) Py_trigger_set_microtime, METH_VARARGS, NULL},
+    {"set_null", (PyCFunction) Trigger_set_null, METH_NOARGS, NULL},
+    {"set_note", (PyCFunction) Trigger_set_note, METH_VARARGS, NULL},
+    {"set_cc", (PyCFunction) Trigger_set_cc, METH_VARARGS, NULL},
+    {"set_probability", (PyCFunction) Trigger_set_probability, METH_VARARGS, NULL},
+    {"set_microtime", (PyCFunction) Trigger_set_microtime, METH_VARARGS, NULL},
     {NULL}
 
 };
 
-PyTypeObject Py_triggerType = {
+PyTypeObject Trigger_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "sequoia.trigger",                 /* tp_name           */
-    sizeof (Py_trigger),             /* tp_basicsize      */
+    sizeof (Trigger_Data),             /* tp_basicsize      */
     0,                            /* tp_itemsize       */
-    (destructor) Py_trigger_del,     /* tp_dealloc        */
+    (destructor) Trigger_del,     /* tp_dealloc        */
     0,                            /* tp_print          */
     0,                            /* tp_getattr        */
     0,                            /* tp_setattr        */
     0,                            /* tp_compare        */
-    (reprfunc) Py_trigger_repr,      /* tp_repr           */
+    (reprfunc) Trigger_repr,      /* tp_repr           */
     0,                            /* tp_as_number      */
     0, //&Py_cvec_tp_as_sequence, /* tp_as_sequence    */
     0,                            /* tp_as_mapping     */
@@ -129,7 +129,7 @@ PyTypeObject Py_triggerType = {
     Py_TPFLAGS_DEFAULT,           /* tp_flags          */
 
     // TODO
-    //Py_trigger_doc,                  /* tp_doc            */
+    //Trigger_doc,                  /* tp_doc            */
     0,                  /* tp_doc            */
 
     0,                            /* tp_traverse       */
@@ -140,9 +140,9 @@ PyTypeObject Py_triggerType = {
     0,                            /* tp_iternext       */
 
     // TODO
-    Py_trigger_methods,              /* tp_methods        */
-    //Py_trigger_members,              /* tp_members        */
-    //Py_trigger_getseters,            /* tp_getset         */
+    Trigger_methods,              /* tp_methods        */
+    //Trigger_members,              /* tp_members        */
+    //Trigger_getseters,            /* tp_getset         */
     0,              /* tp_members        */
     0,            /* tp_getset         */
 
@@ -151,9 +151,9 @@ PyTypeObject Py_triggerType = {
     0,                            /* tp_descr_get      */
     0,                            /* tp_descr_set      */
     0,                            /* tp_dictoffset     */
-    (initproc) Py_trigger_init,      /* tp_init           */
+    (initproc) Trigger_init,      /* tp_init           */
     0,                            /* tp_alloc          */
-    Py_trigger_new,                  /* tp_new            */
+    Trigger_new,                  /* tp_new            */
     0,
     0,
     0,

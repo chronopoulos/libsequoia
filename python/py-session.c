@@ -1,6 +1,6 @@
 #include "sequoia-types.h"
 
-static int Py_session_init(Py_session *self, PyObject *args, PyObject *kwds) {
+static int Session_init(Session_Data *self, PyObject *args, PyObject *kwds) {
 
     char *name;
     int tps;
@@ -15,21 +15,21 @@ static int Py_session_init(Py_session *self, PyObject *args, PyObject *kwds) {
 
 }
 
-static PyObject *Py_session_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+static PyObject *Session_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
-    Py_session *self;
-    self = (Py_session *) type->tp_alloc(type, 0);
+    Session_Data *self;
+    self = (Session_Data *) type->tp_alloc(type, 0);
     return (PyObject *) self;
 
 }
 
-static void Py_session_del(Py_session *self) {
+static void Session_del(Session_Data *self) {
 
     Py_TYPE(self)->tp_free((PyObject *) self);
 
 }
 
-static PyObject *Py_session_repr(Py_session * self, PyObject *unused) {
+static PyObject *Session_repr(Session_Data * self, PyObject *unused) {
 
     PyObject *result = NULL;
     char result_str[96];
@@ -43,7 +43,7 @@ static PyObject *Py_session_repr(Py_session * self, PyObject *unused) {
 
 }
 
-static PyObject *Py_session_set_bpm(Py_session *self, PyObject *args) {
+static PyObject *Session_set_bpm(Session_Data *self, PyObject *args) {
 
     float bpm;
 
@@ -57,7 +57,7 @@ static PyObject *Py_session_set_bpm(Py_session *self, PyObject *args) {
 
 }
 
-static PyObject *Py_session_start(Py_session *self, PyObject *unused) {
+static PyObject *Session_start(Session_Data *self, PyObject *unused) {
 
     sq_session_start(&self->sesh);
 
@@ -65,7 +65,7 @@ static PyObject *Py_session_start(Py_session *self, PyObject *unused) {
 
 }
 
-static PyObject *Py_session_stop(Py_session *self, PyObject *unused) {
+static PyObject *Session_stop(Session_Data *self, PyObject *unused) {
 
     sq_session_stop(&self->sesh);
 
@@ -73,13 +73,13 @@ static PyObject *Py_session_stop(Py_session *self, PyObject *unused) {
 
 }
 
-static PyObject *Py_session_get_name(Py_session *self, PyObject *unused) {
+static PyObject *Session_get_name(Session_Data *self, PyObject *unused) {
 
     return PyString_FromString(sq_session_get_name(&self->sesh));
 
 }
 
-static PyObject *Py_session_register_outport(Py_session *self, PyObject *args) {
+static PyObject *Session_register_outport(Session_Data *self, PyObject *args) {
 
     PyObject *object;
 
@@ -87,13 +87,13 @@ static PyObject *Py_session_register_outport(Py_session *self, PyObject *args) {
         return NULL;
     }
 
-    sq_session_register_outport(&self->sesh, &((Py_outport*)object)->outport);
+    sq_session_register_outport(&self->sesh, &((Outport_Data*)object)->outport);
 
     Py_RETURN_NONE;
 
 }
 
-static PyObject *Py_session_add_sequence(Py_session *self, PyObject *args) {
+static PyObject *Session_add_sequence(Session_Data *self, PyObject *args) {
 
     PyObject *object;
 
@@ -101,13 +101,13 @@ static PyObject *Py_session_add_sequence(Py_session *self, PyObject *args) {
         return NULL;
     }
 
-    sq_session_add_sequence(&self->sesh, &((Py_sequence*)object)->seq);
+    sq_session_add_sequence(&self->sesh, &((Sequence_Data*)object)->seq);
 
     Py_RETURN_NONE;
 
 }
 
-static PyObject *Py_session_rm_sequence(Py_session *self, PyObject *args) {
+static PyObject *Session_rm_sequence(Session_Data *self, PyObject *args) {
 
     PyObject *object;
 
@@ -115,13 +115,13 @@ static PyObject *Py_session_rm_sequence(Py_session *self, PyObject *args) {
         return NULL;
     }
 
-    sq_session_rm_sequence(&self->sesh, &((Py_sequence*)object)->seq);
+    sq_session_rm_sequence(&self->sesh, &((Sequence_Data*)object)->seq);
 
     Py_RETURN_NONE;
 
 }
 
-static PyObject *Py_session_get_tps(Py_session *self, PyObject *args) {
+static PyObject *Session_get_tps(Session_Data *self, PyObject *args) {
 
     int result;
     result = sq_session_get_tps(&self->sesh);
@@ -130,7 +130,7 @@ static PyObject *Py_session_get_tps(Py_session *self, PyObject *args) {
 
 }
 
-static PyObject *Py_session_get_bpm(Py_session *self, PyObject *args) {
+static PyObject *Session_get_bpm(Session_Data *self, PyObject *args) {
 
     int result;
     result = sq_session_get_bpm(&self->sesh);
@@ -139,32 +139,32 @@ static PyObject *Py_session_get_bpm(Py_session *self, PyObject *args) {
 
 }
 
-static PyMethodDef Py_session_methods[] = {
+static PyMethodDef Session_methods[] = {
 
-    {"set_bpm", (PyCFunction) Py_session_set_bpm, METH_VARARGS, NULL},
-    {"start", (PyCFunction) Py_session_start, METH_NOARGS, NULL},
-    {"stop", (PyCFunction) Py_session_stop, METH_NOARGS, NULL},
-    {"get_name", (PyCFunction) Py_session_get_name, METH_NOARGS, NULL},
-    {"register_outport", (PyCFunction) Py_session_register_outport, METH_VARARGS, NULL},
-    {"add_sequence", (PyCFunction) Py_session_add_sequence, METH_VARARGS, NULL},
-    {"rm_sequence", (PyCFunction) Py_session_rm_sequence, METH_VARARGS, NULL},
-    {"get_tps", (PyCFunction) Py_session_get_tps, METH_VARARGS, NULL},
-    {"get_bpm", (PyCFunction) Py_session_get_bpm, METH_VARARGS, NULL},
+    {"set_bpm", (PyCFunction) Session_set_bpm, METH_VARARGS, NULL},
+    {"start", (PyCFunction) Session_start, METH_NOARGS, NULL},
+    {"stop", (PyCFunction) Session_stop, METH_NOARGS, NULL},
+    {"get_name", (PyCFunction) Session_get_name, METH_NOARGS, NULL},
+    {"register_outport", (PyCFunction) Session_register_outport, METH_VARARGS, NULL},
+    {"add_sequence", (PyCFunction) Session_add_sequence, METH_VARARGS, NULL},
+    {"rm_sequence", (PyCFunction) Session_rm_sequence, METH_VARARGS, NULL},
+    {"get_tps", (PyCFunction) Session_get_tps, METH_VARARGS, NULL},
+    {"get_bpm", (PyCFunction) Session_get_bpm, METH_VARARGS, NULL},
     {NULL}
 
 };
 
-PyTypeObject Py_sessionType = {
+PyTypeObject Session_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "sequoia.session",                 /* tp_name           */
-    sizeof (Py_session),             /* tp_basicsize      */
+    sizeof (Session_Data),             /* tp_basicsize      */
     0,                            /* tp_itemsize       */
-    (destructor) Py_session_del,     /* tp_dealloc        */
+    (destructor) Session_del,     /* tp_dealloc        */
     0,                            /* tp_print          */
     0,                            /* tp_getattr        */
     0,                            /* tp_setattr        */
     0,                            /* tp_compare        */
-    (reprfunc) Py_session_repr,      /* tp_repr           */
+    (reprfunc) Session_repr,      /* tp_repr           */
     0,                            /* tp_as_number      */
     0, //&Py_cvec_tp_as_sequence, /* tp_as_sequence    */
     0,                            /* tp_as_mapping     */
@@ -177,7 +177,7 @@ PyTypeObject Py_sessionType = {
     Py_TPFLAGS_DEFAULT,           /* tp_flags          */
 
     // TODO
-    //Py_session_doc,                  /* tp_doc            */
+    //Session_doc,                  /* tp_doc            */
     0,                  /* tp_doc            */
 
     0,                            /* tp_traverse       */
@@ -188,9 +188,9 @@ PyTypeObject Py_sessionType = {
     0,                            /* tp_iternext       */
 
     // TODO
-    Py_session_methods,              /* tp_methods        */
-    //Py_session_members,              /* tp_members        */
-    //Py_session_getseters,            /* tp_getset         */
+    Session_methods,              /* tp_methods        */
+    //Session_members,              /* tp_members        */
+    //Session_getseters,            /* tp_getset         */
     0,              /* tp_members        */
     0,            /* tp_getset         */
 
@@ -199,9 +199,9 @@ PyTypeObject Py_sessionType = {
     0,                            /* tp_descr_get      */
     0,                            /* tp_descr_set      */
     0,                            /* tp_dictoffset     */
-    (initproc) Py_session_init,      /* tp_init           */
+    (initproc) Session_init,      /* tp_init           */
     0,                            /* tp_alloc          */
-    Py_session_new,                  /* tp_new            */
+    Session_new,                  /* tp_new            */
     0,
     0,
     0,

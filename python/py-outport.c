@@ -1,6 +1,6 @@
 #include "sequoia-types.h"
 
-static int Py_outport_init(Py_outport *self, PyObject *args, PyObject *kwds) {
+static int Outport_init(Outport_Data *self, PyObject *args, PyObject *kwds) {
 
     char *name;
 
@@ -14,21 +14,21 @@ static int Py_outport_init(Py_outport *self, PyObject *args, PyObject *kwds) {
 
 }
 
-static PyObject *Py_outport_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+static PyObject *Outport_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
-    Py_outport *self;
-    self = (Py_outport *) type->tp_alloc(type, 0);
+    Outport_Data *self;
+    self = (Outport_Data *) type->tp_alloc(type, 0);
     return (PyObject *) self;
 
 }
 
-static void Py_outport_del(Py_outport *self) {
+static void Outport_del(Outport_Data *self) {
 
     Py_TYPE(self)->tp_free((PyObject *) self);
 
 }
 
-static PyObject *Py_outport_repr(Py_outport *self, PyObject *unused) {
+static PyObject *Outport_repr(Outport_Data *self, PyObject *unused) {
 
     PyObject *result = NULL;
     char result_str[96];
@@ -40,7 +40,7 @@ static PyObject *Py_outport_repr(Py_outport *self, PyObject *unused) {
 
 }
 
-static PyObject *Py_outport_set_name(Py_outport *self, PyObject *args) {
+static PyObject *Outport_set_name(Outport_Data *self, PyObject *args) {
 
     char *name;
 
@@ -52,7 +52,7 @@ static PyObject *Py_outport_set_name(Py_outport *self, PyObject *args) {
 
 }
 
-static PyObject *Py_outport_get_name(Py_outport *self, PyObject *unused) {
+static PyObject *Outport_get_name(Outport_Data *self, PyObject *unused) {
 
     PyObject *result = NULL;
 
@@ -62,25 +62,25 @@ static PyObject *Py_outport_get_name(Py_outport *self, PyObject *unused) {
 
 }
 
-static PyMethodDef Py_outport_methods[] = {
+static PyMethodDef Outport_methods[] = {
 
-    {"set_name", (PyCFunction) Py_outport_set_name, METH_VARARGS, NULL},
-    {"get_name", (PyCFunction) Py_outport_get_name, METH_NOARGS, NULL},
+    {"set_name", (PyCFunction) Outport_set_name, METH_VARARGS, NULL},
+    {"get_name", (PyCFunction) Outport_get_name, METH_NOARGS, NULL},
     {NULL}
 
 };
 
-PyTypeObject Py_outportType = {
+PyTypeObject Outport_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "sequoia.outport",                 /* tp_name           */
-    sizeof (Py_outport),             /* tp_basicsize      */
+    sizeof (Outport_Data),             /* tp_basicsize      */
     0,                            /* tp_itemsize       */
-    (destructor) Py_outport_del,     /* tp_dealloc        */
+    (destructor) Outport_del,     /* tp_dealloc        */
     0,                            /* tp_print          */
     0,                            /* tp_getattr        */
     0,                            /* tp_setattr        */
     0,                            /* tp_compare        */
-    (reprfunc) Py_outport_repr,      /* tp_repr           */
+    (reprfunc) Outport_repr,      /* tp_repr           */
     0,                            /* tp_as_number      */
     0, //&Py_cvec_tp_as_sequence, /* tp_as_sequence    */
     0,                            /* tp_as_mapping     */
@@ -93,7 +93,7 @@ PyTypeObject Py_outportType = {
     Py_TPFLAGS_DEFAULT,           /* tp_flags          */
 
     // TODO
-    //Py_outport_doc,                  /* tp_doc            */
+    //Outport_doc,                  /* tp_doc            */
     0,                  /* tp_doc            */
 
     0,                            /* tp_traverse       */
@@ -104,9 +104,9 @@ PyTypeObject Py_outportType = {
     0,                            /* tp_iternext       */
 
     // TODO
-    Py_outport_methods,              /* tp_methods        */
-    //Py_outport_members,              /* tp_members        */
-    //Py_outport_getseters,            /* tp_getset         */
+    Outport_methods,              /* tp_methods        */
+    //Outport_members,              /* tp_members        */
+    //Outport_getseters,            /* tp_getset         */
     0,              /* tp_members        */
     0,            /* tp_getset         */
 
@@ -115,9 +115,9 @@ PyTypeObject Py_outportType = {
     0,                            /* tp_descr_get      */
     0,                            /* tp_descr_set      */
     0,                            /* tp_dictoffset     */
-    (initproc) Py_outport_init,      /* tp_init           */
+    (initproc) Outport_init,      /* tp_init           */
     0,                            /* tp_alloc          */
-    Py_outport_new,                  /* tp_new            */
+    Outport_new,                  /* tp_new            */
     0,
     0,
     0,

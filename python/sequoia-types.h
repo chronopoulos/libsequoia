@@ -8,7 +8,7 @@ typedef struct {
 
     sq_session_t sesh;
 
-} Py_session;
+} Session_Data;
 
 typedef struct {
 
@@ -16,7 +16,7 @@ typedef struct {
 
     sq_sequence_t seq;
 
-} Py_sequence;
+} Sequence_Data;
 
 typedef struct {
 
@@ -24,7 +24,7 @@ typedef struct {
 
     sq_trigger_t trig;
 
-} Py_trigger;
+} Trigger_Data;
 
 typedef struct {
 
@@ -32,7 +32,7 @@ typedef struct {
 
     sq_outport_t outport;
 
-} Py_outport;
+} Outport_Data;
 
 typedef struct {
 
@@ -40,11 +40,11 @@ typedef struct {
 
     sq_inport_t inport;
 
-} Py_inport;
+} Inport_Data;
 
-extern PyTypeObject Py_sessionType;
-extern PyTypeObject Py_sequenceType;
-extern PyTypeObject Py_triggerType;
-extern PyTypeObject Py_outportType;
-extern PyTypeObject Py_inportType;
+extern PyTypeObject Session_Type;
+extern PyTypeObject Sequence_Type;
+extern PyTypeObject Trigger_Type;
+extern PyTypeObject Outport_Type;
+extern PyTypeObject Inport_Type;
 
