@@ -2,8 +2,8 @@
 
 from distutils.core import setup, Extension
 
-pysequoia_sources = ['sequoiamodule.c', 'py-session.c', 'py-sequence.c',
-                        'py-trigger.c', 'py-outport.c', 'py-inport.c']
+pysequoia_sources = ['module_py.c', 'session_py.c', 'sequence_py.c',
+                        'trigger_py.c', 'outport_py.c', 'inport_py.c']
 
 sequoia_extension = Extension("sequoia",
                                 sources=pysequoia_sources,

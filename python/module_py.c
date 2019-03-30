@@ -1,4 +1,4 @@
-#include "sequoia-types.h"
+#include "types_py.h"
 
 #if PY_MAJOR_VERSION >= 3
 // Python3 module definition

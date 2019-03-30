@@ -1,4 +1,4 @@
-#include "sequoia-types.h"
+#include "types_py.h"
 
 static int Trigger_init(Trigger_Data *self, PyObject *args, PyObject *kwds) {
 

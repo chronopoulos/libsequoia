@@ -1,4 +1,4 @@
-#include "sequoia-types.h"
+#include "types_py.h"
 
 static int Sequence_init(Sequence_Data *self, PyObject *args, PyObject *kwds) {
 

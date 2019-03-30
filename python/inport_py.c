@@ -1,6 +1,6 @@
-#include "sequoia-types.h"
+#include "types_py.h"
 
-static int Outport_init(Outport_Data *self, PyObject *args, PyObject *kwds) {
+static int Inport_init(Inport_Data *self, PyObject *args, PyObject *kwds) {
 
     char *name;
 
@@ -8,79 +8,82 @@ static int Outport_init(Outport_Data *self, PyObject *args, PyObject *kwds) {
         return -1;
     }
 
-    sq_outport_init(&self->outport, name);
+    sq_inport_init(&self->inport, name);
 
     return 0;
 
 }
 
-static PyObject *Outport_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+static PyObject *Inport_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
-    Outport_Data *self;
-    self = (Outport_Data *) type->tp_alloc(type, 0);
+    Inport_Data *self;
+    self = (Inport_Data *) type->tp_alloc(type, 0);
     return (PyObject *) self;
 
 }
 
-static void Outport_del(Outport_Data *self) {
+static void Inport_del(Inport_Data *self) {
 
     Py_TYPE(self)->tp_free((PyObject *) self);
 
 }
 
-static PyObject *Outport_repr(Outport_Data *self, PyObject *unused) {
+static PyObject *Inport_repr(Inport_Data *self, PyObject *unused) {
 
     PyObject *result = NULL;
     char result_str[96];
 
-    sprintf(result_str, "<sequoia out-port: %s>", self->outport.name);
+    sprintf(result_str, "<sequoia in-port: %s>", self->inport.name);
     result = PyUnicode_FromString(result_str);
 
     return result;
 
 }
 
-static PyObject *Outport_set_name(Outport_Data *self, PyObject *args) {
+static PyObject *Inport_set_name(Inport_Data *self, PyObject *args) {
 
     char *name;
 
     PyArg_ParseTuple(args, "s", &name);
 
-    sq_outport_set_name(&self->outport, name);
+    sq_inport_set_name(&self->inport, name);
 
     Py_RETURN_NONE;
 
 }
 
-static PyObject *Outport_get_name(Outport_Data *self, PyObject *unused) {
+static PyObject *Inport_set_type(Inport_Data *self, PyObject *args) {
 
-    PyObject *result = NULL;
+    int type;
 
-    result = PyString_FromString(sq_outport_get_name(&self->outport));
+    PyArg_ParseTuple(args, "i", &type);
 
-    return result;
+    sq_inport_set_type(&self->inport, type);
+
+    Py_RETURN_NONE;
+
 
 }
 
-static PyMethodDef Outport_methods[] = {
+static PyMethodDef Inport_methods[] = {
 
-    {"set_name", (PyCFunction) Outport_set_name, METH_VARARGS, NULL},
-    {"get_name", (PyCFunction) Outport_get_name, METH_NOARGS, NULL},
+    {"set_name", (PyCFunction) Inport_set_name, METH_VARARGS, NULL},
+    {"set_type", (PyCFunction) Inport_set_type, METH_VARARGS, NULL},
     {NULL}
 
 };
 
-PyTypeObject Outport_Type = {
+PyTypeObject Inport_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "sequoia.outport",                 /* tp_name           */
-    sizeof (Outport_Data),             /* tp_basicsize      */
+    "sequoia.inport",                 /* tp_name           */
+    sizeof (Inport_Data),             /* tp_basicsize      */
     0,                            /* tp_itemsize       */
-    (destructor) Outport_del,     /* tp_dealloc        */
+    (destructor) Inport_del,     /* tp_dealloc        */
     0,                            /* tp_print          */
     0,                            /* tp_getattr        */
     0,                            /* tp_setattr        */
     0,                            /* tp_compare        */
-    (reprfunc) Outport_repr,      /* tp_repr           */
+    (reprfunc) Inport_repr,      /* tp_repr           */
     0,                            /* tp_as_number      */
     0, //&Py_cvec_tp_as_sequence, /* tp_as_sequence    */
     0,                            /* tp_as_mapping     */
@@ -93,7 +96,7 @@ PyTypeObject Outport_Type = {
     Py_TPFLAGS_DEFAULT,           /* tp_flags          */
 
     // TODO
-    //Outport_doc,                  /* tp_doc            */
+    //Inport_doc,                  /* tp_doc            */
     0,                  /* tp_doc            */
 
     0,                            /* tp_traverse       */
@@ -104,9 +107,9 @@ PyTypeObject Outport_Type = {
     0,                            /* tp_iternext       */
 
     // TODO
-    Outport_methods,              /* tp_methods        */
-    //Outport_members,              /* tp_members        */
-    //Outport_getseters,            /* tp_getset         */
+    Inport_methods,              /* tp_methods        */
+    //Inport_members,              /* tp_members        */
+    //Inport_getseters,            /* tp_getset         */
     0,              /* tp_members        */
     0,            /* tp_getset         */
 
@@ -115,9 +118,9 @@ PyTypeObject Outport_Type = {
     0,                            /* tp_descr_get      */
     0,                            /* tp_descr_set      */
     0,                            /* tp_dictoffset     */
-    (initproc) Outport_init,      /* tp_init           */
+    (initproc) Inport_init,      /* tp_init           */
     0,                            /* tp_alloc          */
-    Outport_new,                  /* tp_new            */
+    Inport_new,                  /* tp_new            */
     0,
     0,
     0,
