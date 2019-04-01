@@ -24,6 +24,12 @@
 
 #include "sequoia.h"
 
+unsigned int _mod(int a, unsigned int n) {
+
+    return (a % n + n) % n;
+
+}
+
 void _inport_sanitize_name(sq_inport_t *inport, const char *name) {
 
     if (strlen(name) <= INPORT_MAX_NAME_LEN) {
@@ -105,7 +111,7 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
                 case INPORT_PLAYHEAD:
                     // distance from 60 is taken modulo the sequence length
                     for (int i=0; i<inport->nseqs; i++) {
-                        iarg = (ev.buffer[1] - 60) % inport->seqs[i]->nsteps;
+                        iarg = _mod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
                         _sequence_set_playhead_now(inport->seqs[i], iarg);
                     }
                     break;
@@ -129,14 +135,14 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
                 case INPORT_FIRST:
                     // distance from 60 is taken modulo the sequence length
                     for (int i=0; i<inport->nseqs; i++) {
-                        iarg = (ev.buffer[1] - 60) % inport->seqs[i]->nsteps;
+                        iarg = _mod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
                         _sequence_set_first_now(inport->seqs[i], iarg);
                     }
                     break;
                 case INPORT_LAST:
                     // distance from 60 is taken modulo the sequence length
                     for (int i=0; i<inport->nseqs; i++) {
-                        iarg = (ev.buffer[1] - 60) % inport->seqs[i]->nsteps;
+                        iarg = _mod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
                         _sequence_set_last_now(inport->seqs[i], iarg);
                     }
                     break;
