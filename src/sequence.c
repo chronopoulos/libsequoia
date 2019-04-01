@@ -286,11 +286,6 @@ void sq_sequence_set_outport(sq_sequence_t *seq, sq_outport_t *outport) {
 
 void sq_sequence_set_trig(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
 
-    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
-        fprintf(stderr, "step index %d out of range\n", step_index);
-        return;
-    }
-
     if (seq->is_playing) {
 
         _sequence_ctrl_msg_t msg;
@@ -309,6 +304,11 @@ void sq_sequence_set_trig(sq_sequence_t *seq, int step_index, sq_trigger_t *trig
 }
 
 void _sequence_set_trig_now(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
+
+    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
+        fprintf(stderr, "step index %d out of range\n", step_index);
+        return;
+    }
 
     int tick_index_old, tick_index_new;
 
@@ -329,11 +329,6 @@ void _sequence_set_trig_now(sq_sequence_t *seq, int step_index, sq_trigger_t *tr
 
 void sq_sequence_clear_trig(sq_sequence_t *seq, int step_index) {
 
-    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
-        fprintf(stderr, "step index %d out of range\n", step_index);
-        return;
-    }
-
     if (seq->is_playing) {
 
         _sequence_ctrl_msg_t msg;
@@ -352,7 +347,10 @@ void sq_sequence_clear_trig(sq_sequence_t *seq, int step_index) {
 
 void _sequence_clear_trig_now(sq_sequence_t *seq, int step_index) {
 
-    /* this function should only be called from within the audio callback */
+    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
+        fprintf(stderr, "step index %d out of range\n", step_index);
+        return;
+    }
 
     sq_trigger_t *trig = seq->trigs + step_index;
     seq->microgrid[_get_tick_index_trig(seq, step_index, trig)] = NULL;
@@ -380,8 +378,6 @@ void sq_sequence_set_transpose(sq_sequence_t *seq, int transpose) {
 
 void _sequence_set_transpose_now(sq_sequence_t *seq, int transpose) {
 
-    /* this function should only be called from within the audio callback */
-
     seq->transpose = transpose;
 
     if (seq->noti_enable) {
@@ -392,11 +388,6 @@ void _sequence_set_transpose_now(sq_sequence_t *seq, int transpose) {
 }
 
 void sq_sequence_set_playhead(sq_sequence_t *seq, int ph) {
-
-    if ( (ph < 0) || (ph >= seq->nticks) ) {
-        fprintf(stderr, "playhead value out of range: %d\n", ph);
-        return;
-    }
 
     if (seq->is_playing) {
 
@@ -414,26 +405,24 @@ void sq_sequence_set_playhead(sq_sequence_t *seq, int ph) {
 
 }
 
-void _sequence_set_playhead_now(sq_sequence_t *seq, int playhead) {
+void _sequence_set_playhead_now(sq_sequence_t *seq, int ph) {
 
-    /* this function should only be called from within the audio callback */
+    if ( (ph < 0) || (ph >= seq->nticks) ) {
+        fprintf(stderr, "playhead value out of range: %d\n", ph);
+        return;
+    }
 
     int stick = seq->tick % seq->tps;
-    seq->tick = playhead * seq->tps + stick;
+    seq->tick = ph * seq->tps + stick;
 
     if (seq->noti_enable) {
-        seq->noti.playhead = playhead;
+        seq->noti.playhead = ph;
         seq->noti.playhead_new = true;
     }
 
 }
 
 void sq_sequence_set_first(sq_sequence_t *seq, int first) {
-
-    if ( (first < 0) || (first >= seq->nticks) ) {
-        fprintf(stderr, "first value out of range: %d\n", first);
-        return;
-    }
 
     if (seq->is_playing) {
 
@@ -453,6 +442,11 @@ void sq_sequence_set_first(sq_sequence_t *seq, int first) {
 
 void _sequence_set_first_now(sq_sequence_t *seq, int first) {
 
+    if ( (first < 0) || (first >= seq->nticks) ) {
+        fprintf(stderr, "first value out of range: %d\n", first);
+        return;
+    }
+
     seq->first = first;
 
     if (seq->noti_enable) {
@@ -464,11 +458,6 @@ void _sequence_set_first_now(sq_sequence_t *seq, int first) {
 }
 
 void sq_sequence_set_last(sq_sequence_t *seq, int last) {
-
-    if ( (last < 0) || (last >= seq->nticks) ) {
-        fprintf(stderr, "last value out of range: %d\n", last);
-        return;
-    }
 
     if (seq->is_playing) {
 
@@ -488,6 +477,11 @@ void sq_sequence_set_last(sq_sequence_t *seq, int last) {
 
 void _sequence_set_last_now(sq_sequence_t *seq, int last) {
 
+    if ( (last < 0) || (last >= seq->nticks) ) {
+        fprintf(stderr, "last value out of range: %d\n", last);
+        return;
+    }
+
     seq->last = last;
 
     if (seq->noti_enable) {
@@ -498,11 +492,6 @@ void _sequence_set_last_now(sq_sequence_t *seq, int last) {
 }
 
 void sq_sequence_set_clockdivide(sq_sequence_t *seq, int div) {
-
-    if (div < 1) {
-        fprintf(stderr, "clock divide of %d is out of range (must be >= 1)\n", div);
-        return;
-    }
 
     if (seq->is_playing) {
 
@@ -522,7 +511,10 @@ void sq_sequence_set_clockdivide(sq_sequence_t *seq, int div) {
 
 void _sequence_set_clockdivide_now(sq_sequence_t *seq, int div) {
 
-    /* this function should only be called from within the audio callback */
+    if (div < 1) {
+        fprintf(stderr, "clock divide of %d is out of range (must be >= 1)\n", div);
+        return;
+    }
 
     seq->div = div;
     seq->idiv = 0;
@@ -553,8 +545,6 @@ void sq_sequence_set_mute(sq_sequence_t *seq, bool mute) {
 }
 
 void _sequence_set_mute_now(sq_sequence_t *seq, bool mute) {
-
-    /* this function should only be called from within the audio callback */
 
     seq->mute = mute;
 
