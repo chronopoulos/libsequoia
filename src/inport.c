@@ -127,10 +127,18 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
                     fprintf(stderr, "INPORT_DIRECTION not yet implemented\n");
                     break;
                 case INPORT_FIRST:
-                    fprintf(stderr, "INPORT_FIRST not yet implemented\n");
+                    // distance from 60 is taken modulo the sequence length
+                    for (int i=0; i<inport->nseqs; i++) {
+                        iarg = (ev.buffer[1] - 60) % inport->seqs[i]->nsteps;
+                        _sequence_set_first_now(inport->seqs[i], iarg);
+                    }
                     break;
                 case INPORT_LAST:
-                    fprintf(stderr, "INPORT_LAST not yet implemented\n");
+                    // distance from 60 is taken modulo the sequence length
+                    for (int i=0; i<inport->nseqs; i++) {
+                        iarg = (ev.buffer[1] - 60) % inport->seqs[i]->nsteps;
+                        _sequence_set_last_now(inport->seqs[i], iarg);
+                    }
                     break;
                 default:
                     // this should never happen
@@ -142,6 +150,5 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
         }
 
     }
-
 
 }
