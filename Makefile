@@ -19,7 +19,7 @@ INSTALL_DIR_INC = /usr/local/include
 
 ##########################
 
-.PHONY: all library examples clean install uninstall
+.PHONY: all library clean install uninstall
 
 ##########################
 
