@@ -199,14 +199,23 @@ void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
                     midi_msg_write_ptr = jack_midi_event_reserve(seq->outport->buf, idx, 3);
                     if (trig->type == TRIG_NOTE) {
 
+                        // note on
                         midi_msg_write_ptr[0] = 143 + trig->channel;
                         midi_msg_write_ptr[1] = trig->note + seq->transpose;
                         midi_msg_write_ptr[2] = trig->velocity;
 
+                        // note off
                         widx_off = (seq->ridx_off + (int)roundl(trig->length * seq->tps)) % seq->nticks;
                         seq->buf_off[widx_off][0] = 127 + trig->channel;
                         seq->buf_off[widx_off][1] = trig->note + seq->transpose;
                         seq->buf_off[widx_off][2] = trig->velocity;
+
+                    } else if (trig->type == TRIG_CC) {
+
+                        // control change (CC)
+                        midi_msg_write_ptr[0] = 175 + trig->channel;
+                        midi_msg_write_ptr[1] = trig->cc_number;
+                        midi_msg_write_ptr[2] = trig->cc_value;
 
                     }
 
@@ -318,7 +327,7 @@ void _sequence_set_trig_now(sq_sequence_t *seq, int step_index, sq_trigger_t *tr
 
     memcpy(seq->trigs + step_index, trig, sizeof(sq_trigger_t));
 
-    if (trig->type == TRIG_NOTE) {
+    if (trig->type != TRIG_NULL) {
         // write the new index
         tick_index_new = _get_tick_index_trig(seq, step_index, trig);
         seq->microgrid[tick_index_new] = seq->trigs + step_index;
