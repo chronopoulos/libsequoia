@@ -25,6 +25,7 @@
 #include <pthread.h>
 #include <jack/midiport.h>
 #include <jack/ringbuffer.h>
+#include <json/json.h>
 
 #include "trigger.h"
 #include "outport.h"
@@ -148,5 +149,13 @@ bool sq_sequence_read_new_clockdivide(sq_sequence_t*, int*);
 bool sq_sequence_read_new_mute(sq_sequence_t*, bool*);
 
 int sq_sequence_get_nsteps(sq_sequence_t*);
+int sq_sequence_get_tps(sq_sequence_t*);
+bool sq_sequence_get_mute(sq_sequence_t*);
+int sq_sequence_get_transpose(sq_sequence_t*);
+int sq_sequence_get_clockdivide(sq_sequence_t*);
+int sq_sequence_get_first(sq_sequence_t*);
+int sq_sequence_get_last(sq_sequence_t*);
+
+json_object *sq_sequence_get_json(sq_sequence_t*);
 
 #endif

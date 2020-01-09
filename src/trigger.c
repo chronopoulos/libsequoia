@@ -88,3 +88,38 @@ void sq_trigger_set_microtime(sq_trigger_t *trig, float microtime) {
 
 }
 
+json_object *sq_trigger_get_json(sq_trigger_t *trig) {
+
+    json_object *jo_trigger = json_object_new_object();
+
+    json_object_object_add(jo_trigger, "type",
+                            json_object_new_int(trig->type));
+
+    json_object_object_add(jo_trigger, "channel",
+                            json_object_new_int(trig->channel));
+
+    json_object_object_add(jo_trigger, "microtime",
+                            json_object_new_double(trig->microtime));
+
+    json_object_object_add(jo_trigger, "note",
+                            json_object_new_int(trig->note));
+
+    json_object_object_add(jo_trigger, "velocity",
+                            json_object_new_int(trig->velocity));
+
+    json_object_object_add(jo_trigger, "length",
+                            json_object_new_double(trig->length));
+
+    json_object_object_add(jo_trigger, "cc_number",
+                            json_object_new_int(trig->cc_number));
+
+    json_object_object_add(jo_trigger, "cc_value",
+                            json_object_new_int(trig->cc_value));
+
+    json_object_object_add(jo_trigger, "probability",
+                            json_object_new_double(trig->probability));
+
+    return jo_trigger;
+
+}
+

@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <jack/jack.h>
 #include <jack/midiport.h>
+#include <json/json.h>
 
 #include "sequence.h"
 #include "outport.h"
@@ -103,5 +104,8 @@ char *sq_session_get_name(sq_session_t*);
 
 int sq_session_get_tps(sq_session_t*);
 int sq_session_get_bpm(sq_session_t*);
+
+json_object *sq_session_get_json(sq_session_t*);
+void sq_session_save(sq_session_t*, const char*);
 
 #endif

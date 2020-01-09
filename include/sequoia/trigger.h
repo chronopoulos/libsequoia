@@ -22,6 +22,8 @@
 #ifndef TRIGGER_H
 #define TRIGGER_H
 
+#include <json/json.h>
+
 enum trig_type {TRIG_NULL, TRIG_NOTE, TRIG_CC};
 
 typedef struct {
@@ -47,5 +49,7 @@ void sq_trigger_set_note(sq_trigger_t*, int, int, float);
 void sq_trigger_set_cc(sq_trigger_t*, int, int);
 void sq_trigger_set_probability(sq_trigger_t*, float);
 void sq_trigger_set_microtime(sq_trigger_t*, float);
+
+json_object *sq_trigger_get_json(sq_trigger_t*);
 
 #endif

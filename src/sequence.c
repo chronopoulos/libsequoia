@@ -699,3 +699,80 @@ int sq_sequence_get_nsteps(sq_sequence_t *seq) {
 
 }
 
+int sq_sequence_get_tps(sq_sequence_t *seq) {
+
+    return seq->tps;
+
+}
+
+bool sq_sequence_get_mute(sq_sequence_t *seq) {
+
+    return seq->mute;
+
+}
+
+int sq_sequence_get_transpose(sq_sequence_t *seq) {
+
+    return seq->transpose;
+
+}
+
+int sq_sequence_get_clockdivide(sq_sequence_t *seq) {
+
+    return seq->div;
+
+}
+
+int sq_sequence_get_first(sq_sequence_t *seq) {
+
+    return seq->first;
+
+}
+
+int sq_sequence_get_last(sq_sequence_t *seq) {
+
+    return seq->last;
+
+}
+
+////
+
+json_object *sq_sequence_get_json(sq_sequence_t *seq) {
+
+    json_object *jo_sequence = json_object_new_object();
+
+    json_object_object_add(jo_sequence, "name",
+                            json_object_new_string(seq->name));
+
+    json_object_object_add(jo_sequence, "nsteps",
+                            json_object_new_int(sq_sequence_get_nsteps(seq)));
+
+    json_object_object_add(jo_sequence, "tps",
+                            json_object_new_int(sq_sequence_get_tps(seq)));
+
+    json_object_object_add(jo_sequence, "mute",
+                            json_object_new_boolean(sq_sequence_get_mute(seq)));
+
+    json_object_object_add(jo_sequence, "transpose",
+                            json_object_new_int(sq_sequence_get_transpose(seq)));
+
+    json_object_object_add(jo_sequence, "clockdivide",
+                            json_object_new_int(sq_sequence_get_clockdivide(seq)));
+
+    json_object_object_add(jo_sequence, "first",
+                            json_object_new_int(sq_sequence_get_first(seq)));
+
+    json_object_object_add(jo_sequence, "last",
+                            json_object_new_int(sq_sequence_get_last(seq)));
+
+    json_object *trigger_array = json_object_new_array();
+    for (int i=0; i<seq->nsteps; i++) {
+        json_object_array_add(trigger_array, sq_trigger_get_json(seq->trigs + i));
+    }
+    json_object_object_add(jo_sequence, "triggers", trigger_array);
+    
+
+    return jo_sequence;
+
+}
+

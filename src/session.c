@@ -400,3 +400,40 @@ int sq_session_get_bpm(sq_session_t *sesh) {
     return sesh->bpm;
 
 }
+
+////
+
+json_object *sq_session_get_json(sq_session_t *sesh) {
+
+    json_object *jo_session = json_object_new_object();
+
+    json_object_object_add(jo_session, "name",
+                            json_object_new_string(sq_session_get_name(sesh)));
+
+    json_object_object_add(jo_session, "bpm",
+                            json_object_new_int(sq_session_get_bpm(sesh)));
+
+    json_object_object_add(jo_session, "tps",
+                            json_object_new_int(sq_session_get_tps(sesh)));
+
+    json_object *sequence_array = json_object_new_array();
+    for (int i=0; i<sesh->nseqs; i++) {
+        json_object_array_add(sequence_array, sq_sequence_get_json(sesh->seqs[i]));
+    }
+    json_object_object_add(jo_session, "sequences", sequence_array);
+    
+    return jo_session;
+
+}
+
+void sq_session_save(sq_session_t *sesh, const char *filename) {
+
+    FILE *fp;
+
+    fp = fopen(filename, "w+");
+    fprintf(fp, "%s", json_object_to_json_string_ext(sq_session_get_json(sesh),
+                                                    JSON_C_TO_STRING_PRETTY));
+    fclose(fp);
+
+}
+
