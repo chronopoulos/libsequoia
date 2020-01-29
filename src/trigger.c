@@ -88,6 +88,20 @@ void sq_trigger_set_microtime(sq_trigger_t *trig, float microtime) {
 
 }
 
+void sq_trigger_set_channel(sq_trigger_t *trig, int channel) {
+
+  if (channel < 1) {
+    channel = 1;
+  }
+
+  if (channel > 16) {
+    channel = 16;
+  }
+
+  trig->channel = channel;
+
+}
+
 json_object *sq_trigger_get_json(sq_trigger_t *trig) {
 
     json_object *jo_trigger = json_object_new_object();

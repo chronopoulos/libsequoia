@@ -49,6 +49,7 @@ void sq_trigger_set_note(sq_trigger_t*, int, int, float);
 void sq_trigger_set_cc(sq_trigger_t*, int, int);
 void sq_trigger_set_probability(sq_trigger_t*, float);
 void sq_trigger_set_microtime(sq_trigger_t*, float);
+void sq_trigger_set_channel(sq_trigger_t*, int);
 
 json_object *sq_trigger_get_json(sq_trigger_t*);
 
