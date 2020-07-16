@@ -107,5 +107,7 @@ float sq_session_get_bpm(sq_session_t*);
 
 json_object *sq_session_get_json(sq_session_t*);
 void sq_session_save(sq_session_t*, const char*);
+sq_session_t *sq_session_load(const char*);
+sq_session_t *sq_session_malloc_from_json(json_object*);
 
 #endif

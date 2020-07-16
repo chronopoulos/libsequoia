@@ -776,3 +776,62 @@ json_object *sq_sequence_get_json(sq_sequence_t *seq) {
 
 }
 
+sq_sequence_t *sq_sequence_malloc_from_json(json_object *jo_seq) {
+
+    struct json_object *jo_tmp, *jo_trig;
+    const char *name;
+    int nsteps, tps, transpose, clockdivide, first, last;
+    bool mute;
+    sq_sequence_t *seq;
+    sq_trigger_t trig;
+
+    // first extract the top-level attributes
+
+    json_object_object_get_ex(jo_seq, "name", &jo_tmp);
+    name = json_object_get_string(jo_tmp);
+
+    json_object_object_get_ex(jo_seq, "nsteps", &jo_tmp);
+    nsteps = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_seq, "tps", &jo_tmp);
+    tps = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_seq, "mute", &jo_tmp);
+    mute = json_object_get_boolean(jo_tmp);
+
+    json_object_object_get_ex(jo_seq, "transpose", &jo_tmp);
+    transpose = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_seq, "clockdivide", &jo_tmp);
+    clockdivide = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_seq, "first", &jo_tmp);
+    first = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_seq, "last", &jo_tmp);
+    last = json_object_get_int(jo_tmp);
+
+    // malloc and init the sequence
+
+    seq = malloc(sizeof(sq_sequence_t));
+    sq_sequence_init(seq, nsteps, tps);
+    sq_sequence_set_name(seq, name);
+    sq_sequence_set_mute(seq, mute);
+    sq_sequence_set_transpose(seq, transpose);
+    sq_sequence_set_clockdivide(seq, clockdivide);
+    sq_sequence_set_first(seq, first);
+    sq_sequence_set_last(seq, last);
+
+    // then set the triggers
+    json_object_object_get_ex(jo_seq, "triggers", &jo_tmp);
+    for (int i=0; i<nsteps; i++) {
+        jo_trig = json_object_array_get_idx(jo_tmp, i);
+        // trigs get copied into seqs, so we don't need to malloc them
+        sq_trigger_from_json(jo_trig, &trig);
+        sq_sequence_set_trig(seq, i, &trig);
+    }
+
+    return seq;
+
+}
+

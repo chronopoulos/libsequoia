@@ -43,6 +43,7 @@ void sq_trigger_set_null(sq_trigger_t *trig) {
     trig->type = TRIG_NULL;
 
 }
+
 void sq_trigger_set_note(sq_trigger_t *trig, int note, int velocity, float length) {
 
     trig->type = TRIG_NOTE;
@@ -134,6 +135,61 @@ json_object *sq_trigger_get_json(sq_trigger_t *trig) {
                             json_object_new_double(trig->probability));
 
     return jo_trigger;
+
+}
+
+void sq_trigger_from_json(json_object *jo_trig, sq_trigger_t *trig) {
+
+    struct json_object *jo_tmp;
+    int type, channel, note, velocity, cc_number, cc_value;
+    float microtime, length, probability;
+
+    // first extract the attributes
+
+    json_object_object_get_ex(jo_trig, "type", &jo_tmp);
+    type = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_trig, "channel", &jo_tmp);
+    channel = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_trig, "microtime", &jo_tmp);
+    microtime = json_object_get_double(jo_tmp);
+
+    json_object_object_get_ex(jo_trig, "note", &jo_tmp);
+    note = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_trig, "velocity", &jo_tmp);
+    velocity = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_trig, "length", &jo_tmp);
+    length = json_object_get_double(jo_tmp);
+
+    json_object_object_get_ex(jo_trig, "cc_number", &jo_tmp);
+    cc_number = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_trig, "cc_value", &jo_tmp);
+    cc_value = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_trig, "probability", &jo_tmp);
+    probability = json_object_get_double(jo_tmp);
+
+    // then set the trig
+
+    sq_trigger_init(trig);
+    switch (type) {
+        case TRIG_NULL:
+            sq_trigger_set_null(trig);
+            break;
+        case TRIG_NOTE:
+            sq_trigger_set_note(trig, note, velocity, length);
+            break;
+        case TRIG_CC:
+            sq_trigger_set_cc(trig, cc_number, cc_value);
+            break;
+    }
+    sq_trigger_set_channel(trig, channel);
+    sq_trigger_set_microtime(trig, microtime);
+    sq_trigger_set_probability(trig, probability);
 
 }
 

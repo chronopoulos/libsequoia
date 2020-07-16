@@ -157,5 +157,6 @@ int sq_sequence_get_first(sq_sequence_t*);
 int sq_sequence_get_last(sq_sequence_t*);
 
 json_object *sq_sequence_get_json(sq_sequence_t*);
+sq_sequence_t *sq_sequence_malloc_from_json(json_object*);
 
 #endif

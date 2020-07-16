@@ -437,3 +437,79 @@ void sq_session_save(sq_session_t *sesh, const char *filename) {
 
 }
 
+sq_session_t *sq_session_load(const char *filename) {
+
+    FILE *fp;
+    long filesize;
+    struct json_object *jo_session;
+    char *buf;
+    size_t ret;
+    sq_session_t *sesh = NULL;
+
+    // open the file descriptor
+    fp = fopen(filename, "r");
+
+    // get the file size
+    fseek(fp, 0L, SEEK_END);
+    filesize = ftell(fp);
+    rewind(fp);
+
+    // allocate the read buffer
+    buf = malloc(filesize);
+
+    // read the file into the buffer
+    ret = fread(buf, 1, filesize, fp);
+    if (ret == filesize) {
+        jo_session = json_tokener_parse(buf);
+        sesh = sq_session_malloc_from_json(jo_session);
+    } else {
+        fprintf(stderr, "error while reading file: %s", filename);
+    }
+
+    // clean up
+    fclose(fp);
+    free(buf);
+
+    return sesh;
+
+}
+
+sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
+
+    struct json_object *jo_tmp, *jo_seq;
+    const char *name;
+    int tps;
+    double bpm;
+    sq_session_t *sesh;
+    sq_sequence_t *seq_tmp = NULL;
+
+    // first extract the top-level attributes
+
+    json_object_object_get_ex(jo_session, "name", &jo_tmp);
+    name = json_object_get_string(jo_tmp);
+
+    json_object_object_get_ex(jo_session, "tps", &jo_tmp);
+    tps = json_object_get_int(jo_tmp);
+
+    json_object_object_get_ex(jo_session, "bpm", &jo_tmp);
+    bpm = json_object_get_double(jo_tmp);
+
+
+    // malloc and init the session
+    sesh = malloc(sizeof(sq_session_t));
+    sq_session_init(sesh, name, tps);
+    sq_session_set_bpm(sesh, bpm);
+
+    // then add the sequences
+
+    json_object_object_get_ex(jo_session, "sequences", &jo_tmp);
+    for (int i=0; i<json_object_array_length(jo_tmp); i++) {
+        jo_seq = json_object_array_get_idx(jo_tmp, i);
+        seq_tmp = sq_sequence_malloc_from_json(jo_seq);
+        sq_session_add_sequence(sesh, seq_tmp);
+    }
+
+    return sesh;
+
+}
+
