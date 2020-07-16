@@ -770,7 +770,13 @@ json_object *sq_sequence_get_json(sq_sequence_t *seq) {
         json_object_array_add(trigger_array, sq_trigger_get_json(seq->trigs + i));
     }
     json_object_object_add(jo_sequence, "triggers", trigger_array);
-    
+
+    if (seq->outport) {
+        json_object_object_add(jo_sequence, "outport",
+                                json_object_new_string(seq->outport->name));
+    } else {
+        json_object_object_add(jo_sequence, "outport", NULL);
+    }
 
     return jo_sequence;
 

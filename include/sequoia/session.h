@@ -87,7 +87,9 @@ typedef struct {
 
 void sq_session_init(sq_session_t*, const char*, int);
 int sq_session_register_outport(sq_session_t *, sq_outport_t*);
+sq_outport_t *sq_session_get_outport_from_name(sq_session_t*, const char*);
 int sq_session_register_inport(sq_session_t *, sq_inport_t*);
+sq_inport_t *sq_session_get_inport_from_name(sq_session_t*, const char*);
 void sq_session_start(sq_session_t*);
 void sq_session_stop(sq_session_t*);
 

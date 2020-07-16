@@ -158,3 +158,47 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
     }
 
 }
+
+json_object *sq_inport_get_json(sq_inport_t *inport) {
+
+    json_object *jo_inport = json_object_new_object();
+
+    json_object_object_add(jo_inport, "name",
+                            json_object_new_string(inport->name));
+
+    json_object_object_add(jo_inport, "type",
+                            json_object_new_int(inport->type));
+
+    json_object *seq_array = json_object_new_array();
+    for (int i=0; i<inport->nseqs; i++) {
+        json_object_array_add(seq_array, json_object_new_string(inport->seqs[i]->name));
+    }
+    json_object_object_add(jo_inport, "sequences", seq_array);
+
+    return jo_inport;
+
+}
+
+sq_inport_t *sq_inport_malloc_from_json(json_object *jo_inport) {
+
+    sq_inport_t *inport;
+    const char *name;
+    json_object *jo_tmp;
+    enum inport_type type;
+    
+
+    json_object_object_get_ex(jo_inport, "name", &jo_tmp);
+    name = json_object_get_string(jo_tmp);
+
+    json_object_object_get_ex(jo_inport, "type", &jo_tmp);
+    type = json_object_get_int(jo_tmp);
+
+    inport = malloc(sizeof(sq_inport_t));
+    sq_inport_init(inport, name);
+    sq_inport_set_type(inport, type);
+
+    return inport;
+
+}
+
+

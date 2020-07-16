@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 
 #include "sequoia.h"
 
@@ -214,6 +215,18 @@ int sq_session_register_outport(sq_session_t *sesh, sq_outport_t *outport) {
 
 }
 
+sq_outport_t *sq_session_get_outport_from_name(sq_session_t *sesh, const char *name) {
+
+    for (int i=0; i<sesh->noutports; i++) {
+        if (strcmp(sesh->outports[i]->name, name) == 0) {
+            return sesh->outports[i];
+        }
+    }
+
+    return NULL;
+
+}
+
 int sq_session_register_inport(sq_session_t *sesh, sq_inport_t *inport) {
 
     jack_port_t *jack_port;
@@ -238,6 +251,18 @@ int sq_session_register_inport(sq_session_t *sesh, sq_inport_t *inport) {
     sesh->ninports++;
 
     return 0;
+
+}
+
+sq_inport_t *sq_session_get_inport_from_name(sq_session_t *sesh, const char *name) {
+
+    for (int i=0; i<sesh->ninports; i++) {
+        if (strcmp(sesh->inports[i]->name, name) == 0) {
+            return sesh->inports[i];
+        }
+    }
+
+    return NULL;
 
 }
 
@@ -381,6 +406,18 @@ void _session_rm_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
 
 }
 
+sq_sequence_t *sq_session_get_sequence_from_name(sq_session_t *sesh, const char *name) {
+
+    for (int i=0; i<sesh->nseqs; i++) {
+        if (strcmp(sesh->seqs[i]->name, name) == 0) {
+            return sesh->seqs[i];
+        }
+    }
+
+    return NULL;
+
+}
+
 char *sq_session_get_name(sq_session_t *sesh) {
 
     return jack_get_client_name(sesh->jack_client);
@@ -407,21 +444,45 @@ json_object *sq_session_get_json(sq_session_t *sesh) {
 
     json_object *jo_session = json_object_new_object();
 
+    // top-level attributes
     json_object_object_add(jo_session, "name",
                             json_object_new_string(sq_session_get_name(sesh)));
-
     json_object_object_add(jo_session, "bpm",
                             json_object_new_double(sq_session_get_bpm(sesh)));
-
     json_object_object_add(jo_session, "tps",
                             json_object_new_int(sq_session_get_tps(sesh)));
 
+    printf("cp1\n");
+
+    // sequences
     json_object *sequence_array = json_object_new_array();
+    printf("cp1a\n");
     for (int i=0; i<sesh->nseqs; i++) {
         json_object_array_add(sequence_array, sq_sequence_get_json(sesh->seqs[i]));
     }
+    printf("cp1b\n");
     json_object_object_add(jo_session, "sequences", sequence_array);
     
+    printf("cp2\n");
+
+    // inports
+    json_object *inport_array = json_object_new_array();
+    for (int i=0; i<sesh->ninports; i++) {
+        json_object_array_add(inport_array, sq_inport_get_json(sesh->inports[i]));
+    }
+    json_object_object_add(jo_session, "inports", inport_array);
+    
+    printf("cp3\n");
+
+    // outports
+    json_object *outport_array = json_object_new_array();
+    for (int i=0; i<sesh->noutports; i++) {
+        json_object_array_add(outport_array, sq_outport_get_json(sesh->outports[i]));
+    }
+    json_object_object_add(jo_session, "outports", outport_array);
+    
+    printf("cp4\n");
+
     return jo_session;
 
 }
@@ -457,7 +518,7 @@ sq_session_t *sq_session_load(const char *filename) {
     // allocate the read buffer
     buf = malloc(filesize);
 
-    // read the file into the buffer
+    // read the file into the buffer, parse and instantiate the session
     ret = fread(buf, 1, filesize, fp);
     if (ret == filesize) {
         jo_session = json_tokener_parse(buf);
@@ -476,37 +537,67 @@ sq_session_t *sq_session_load(const char *filename) {
 
 sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
 
-    struct json_object *jo_tmp, *jo_seq;
+    struct json_object *jo_tmp, *jo_tmp2, *jo_tmp3, *jo_tmp4;
     const char *name;
     int tps;
     double bpm;
     sq_session_t *sesh;
     sq_sequence_t *seq_tmp = NULL;
+    sq_inport_t *inport_tmp = NULL;
+    sq_outport_t *outport_tmp = NULL;
 
     // first extract the top-level attributes
-
     json_object_object_get_ex(jo_session, "name", &jo_tmp);
     name = json_object_get_string(jo_tmp);
-
     json_object_object_get_ex(jo_session, "tps", &jo_tmp);
     tps = json_object_get_int(jo_tmp);
-
     json_object_object_get_ex(jo_session, "bpm", &jo_tmp);
     bpm = json_object_get_double(jo_tmp);
-
 
     // malloc and init the session
     sesh = malloc(sizeof(sq_session_t));
     sq_session_init(sesh, name, tps);
     sq_session_set_bpm(sesh, bpm);
 
-    // then add the sequences
+    // add the outports
+    json_object_object_get_ex(jo_session, "outports", &jo_tmp);
+    for (int i=0; i<json_object_array_length(jo_tmp); i++) {
+        jo_tmp2 = json_object_array_get_idx(jo_tmp, i);
+        outport_tmp = sq_outport_malloc_from_json(jo_tmp2);
+        sq_session_register_outport(sesh, outport_tmp);
+    }
 
+    // add the sequences
     json_object_object_get_ex(jo_session, "sequences", &jo_tmp);
     for (int i=0; i<json_object_array_length(jo_tmp); i++) {
-        jo_seq = json_object_array_get_idx(jo_tmp, i);
-        seq_tmp = sq_sequence_malloc_from_json(jo_seq);
+        jo_tmp2 = json_object_array_get_idx(jo_tmp, i);
+        seq_tmp = sq_sequence_malloc_from_json(jo_tmp2);
+        // outport remains null, resolve it now
+        json_object_object_get_ex(jo_tmp2, "outport", &jo_tmp3);
+        name = json_object_get_string(jo_tmp3);
+        outport_tmp = sq_session_get_outport_from_name(sesh, name);
+        if (outport_tmp) {
+            sq_sequence_set_outport(seq_tmp, outport_tmp);
+        }
         sq_session_add_sequence(sesh, seq_tmp);
+    }
+
+    // add the inports
+    json_object_object_get_ex(jo_session, "inports", &jo_tmp);
+    for (int i=0; i<json_object_array_length(jo_tmp); i++) {
+        jo_tmp2 = json_object_array_get_idx(jo_tmp, i);
+        inport_tmp = sq_inport_malloc_from_json(jo_tmp2);
+        // seqs remains null, resolve them now
+        json_object_object_get_ex(jo_tmp2, "sequences", &jo_tmp3);
+        for (int j=0; j<json_object_array_length(jo_tmp3); j++) {
+            jo_tmp4 = json_object_array_get_idx(jo_tmp3, i);
+            name = json_object_get_string(jo_tmp4);
+            seq_tmp = sq_session_get_sequence_from_name(sesh, name);
+            if (seq_tmp) {
+                _inport_add_sequence_now(inport_tmp, seq_tmp);
+            }
+        }
+        sq_session_register_inport(sesh, inport_tmp);
     }
 
     return sesh;

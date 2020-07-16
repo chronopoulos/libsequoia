@@ -59,3 +59,31 @@ char *sq_outport_get_name(sq_outport_t *outport) {
     return outport->name;
 
 }
+
+json_object *sq_outport_get_json(sq_outport_t *outport) {
+
+    json_object *jo_outport = json_object_new_object();
+
+    json_object_object_add(jo_outport, "name",
+                            json_object_new_string(sq_outport_get_name(outport)));
+
+    return jo_outport;
+
+}
+
+sq_outport_t *sq_outport_malloc_from_json(json_object *jo_outport) {
+
+    sq_outport_t *outport;
+    const char *name;
+    json_object *jo_tmp;
+
+    json_object_object_get_ex(jo_outport, "name", &jo_tmp);
+    name = json_object_get_string(jo_tmp);
+
+    outport = malloc(sizeof(sq_outport_t));
+    sq_outport_init(outport, name);
+
+    return outport;
+
+}
+
