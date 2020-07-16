@@ -411,7 +411,7 @@ json_object *sq_session_get_json(sq_session_t *sesh) {
                             json_object_new_string(sq_session_get_name(sesh)));
 
     json_object_object_add(jo_session, "bpm",
-                            json_object_new_int(sq_session_get_bpm(sesh)));
+                            json_object_new_double(sq_session_get_bpm(sesh)));
 
     json_object_object_add(jo_session, "tps",
                             json_object_new_int(sq_session_get_tps(sesh)));
