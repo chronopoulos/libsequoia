@@ -103,7 +103,7 @@ void _session_rm_sequence_now(sq_session_t*, sq_sequence_t*);
 char *sq_session_get_name(sq_session_t*);
 
 int sq_session_get_tps(sq_session_t*);
-int sq_session_get_bpm(sq_session_t*);
+float sq_session_get_bpm(sq_session_t*);
 
 json_object *sq_session_get_json(sq_session_t*);
 void sq_session_save(sq_session_t*, const char*);
