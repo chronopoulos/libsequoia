@@ -452,18 +452,13 @@ json_object *sq_session_get_json(sq_session_t *sesh) {
     json_object_object_add(jo_session, "tps",
                             json_object_new_int(sq_session_get_tps(sesh)));
 
-    printf("cp1\n");
-
     // sequences
     json_object *sequence_array = json_object_new_array();
-    printf("cp1a\n");
     for (int i=0; i<sesh->nseqs; i++) {
         json_object_array_add(sequence_array, sq_sequence_get_json(sesh->seqs[i]));
     }
-    printf("cp1b\n");
     json_object_object_add(jo_session, "sequences", sequence_array);
     
-    printf("cp2\n");
 
     // inports
     json_object *inport_array = json_object_new_array();
@@ -472,8 +467,6 @@ json_object *sq_session_get_json(sq_session_t *sesh) {
     }
     json_object_object_add(jo_session, "inports", inport_array);
     
-    printf("cp3\n");
-
     // outports
     json_object *outport_array = json_object_new_array();
     for (int i=0; i<sesh->noutports; i++) {
@@ -481,8 +474,6 @@ json_object *sq_session_get_json(sq_session_t *sesh) {
     }
     json_object_object_add(jo_session, "outports", outport_array);
     
-    printf("cp4\n");
-
     return jo_session;
 
 }
