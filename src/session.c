@@ -188,6 +188,14 @@ void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
 
 }
 
+void sq_session_disconnect_jack(sq_session_t *sesh) {
+
+    if (jack_client_close(sesh->jack_client)) {
+        fprintf(stderr, "sequoia failed to disconnect jack client\n");
+    }
+
+}
+
 int sq_session_register_outport(sq_session_t *sesh, sq_outport_t *outport) {
 
     jack_port_t *jack_port;
