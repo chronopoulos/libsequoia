@@ -104,7 +104,7 @@ typedef struct {
 
 } sq_sequence_t;
 
-void sq_sequence_init(sq_sequence_t*, int, int);
+sq_sequence_t *sq_sequence_new(int, int);
 void sq_sequence_noti_init(sq_sequence_noti_t*);
 
 void _sequence_tick(sq_sequence_t*, jack_nframes_t);

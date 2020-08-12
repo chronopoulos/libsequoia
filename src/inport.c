@@ -41,7 +41,11 @@ void _inport_sanitize_name(sq_inport_t *inport, const char *name) {
 
 }
 
-void sq_inport_init(sq_inport_t *inport, const char *name) {
+sq_inport_t *sq_inport_new(const char *name) {
+
+    sq_inport_t *inport;
+
+    inport = malloc(sizeof(sq_inport_t));
 
     inport->type = INPORT_NONE;
 
@@ -52,6 +56,8 @@ void sq_inport_init(sq_inport_t *inport, const char *name) {
     inport->buf = NULL;
 
     inport->nseqs = 0;
+
+    return inport;
 
 }
 
@@ -193,8 +199,7 @@ sq_inport_t *sq_inport_malloc_from_json(json_object *jo_inport) {
     json_object_object_get_ex(jo_inport, "type", &jo_tmp);
     type = json_object_get_int(jo_tmp);
 
-    inport = malloc(sizeof(sq_inport_t));
-    sq_inport_init(inport, name);
+    inport = sq_inport_new(name);
     sq_inport_set_type(inport, type);
 
     return inport;

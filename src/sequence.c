@@ -87,7 +87,11 @@ void _sequence_serve_ctrl_msgs(sq_sequence_t *seq) {
 
 // </helper>
 
-void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
+sq_sequence_t *sq_sequence_new(int nsteps, int tps) {
+
+    sq_sequence_t *seq;
+
+    seq = malloc(sizeof(sq_sequence_t));
 
     seq->nsteps = nsteps;
     seq->tps = tps;
@@ -135,6 +139,8 @@ void sq_sequence_init(sq_sequence_t *seq, int nsteps, int tps) {
 
     seq->ridx_off = 0;
     _sequence_reset_now(seq);
+
+    return seq;
 
 }
 
@@ -819,8 +825,7 @@ sq_sequence_t *sq_sequence_malloc_from_json(json_object *jo_seq) {
 
     // malloc and init the sequence
 
-    seq = malloc(sizeof(sq_sequence_t));
-    sq_sequence_init(seq, nsteps, tps);
+    seq = sq_sequence_new(nsteps, tps);
     sq_sequence_set_name(seq, name);
     sq_sequence_set_mute(seq, mute);
     sq_sequence_set_transpose(seq, transpose);

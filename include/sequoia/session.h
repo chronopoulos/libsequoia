@@ -85,14 +85,16 @@ typedef struct {
 
 } sq_session_t;
 
-void sq_session_init(sq_session_t*, const char*, int);
+sq_session_t *sq_session_new(const char*, int);
 void sq_session_disconnect_jack(sq_session_t*);
 int sq_session_register_outport(sq_session_t *, sq_outport_t*);
-sq_outport_t *sq_session_get_outport_from_name(sq_session_t*, const char*);
 int sq_session_register_inport(sq_session_t *, sq_inport_t*);
-sq_inport_t *sq_session_get_inport_from_name(sq_session_t*, const char*);
 void sq_session_start(sq_session_t*);
 void sq_session_stop(sq_session_t*);
+
+sq_sequence_t *sq_session_get_sequence_from_name(sq_session_t*, const char*);
+sq_inport_t *sq_session_get_inport_from_name(sq_session_t*, const char*);
+sq_outport_t *sq_session_get_outport_from_name(sq_session_t*, const char*);
 
 void sq_session_set_bpm(sq_session_t*, float);
 void _session_set_bpm_now(sq_session_t*, float);

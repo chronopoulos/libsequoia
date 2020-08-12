@@ -47,7 +47,7 @@ typedef struct {
 
 } sq_inport_t;
 
-void sq_inport_init(sq_inport_t*, const char*);
+sq_inport_t *sq_inport_new(const char*);
 void sq_inport_set_name(sq_inport_t*, const char*);
 void sq_inport_set_type(sq_inport_t*, enum inport_type);
 void _inport_add_sequence_now(sq_inport_t*, sq_sequence_t*);

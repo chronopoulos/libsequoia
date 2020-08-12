@@ -36,7 +36,7 @@ typedef struct {
 
 } sq_outport_t;
 
-void sq_outport_init(sq_outport_t*, const char*);
+sq_outport_t *sq_outport_new(const char*);
 void sq_outport_set_name(sq_outport_t*, const char*);
 char *sq_outport_get_name(sq_outport_t*);
 json_object *sq_outport_get_json(sq_outport_t*);

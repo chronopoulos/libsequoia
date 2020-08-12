@@ -34,13 +34,19 @@ void _outport_sanitize_name(sq_outport_t *outport, const char *name) {
 
 }
 
-void sq_outport_init(sq_outport_t *outport, const char *name) {
+sq_outport_t *sq_outport_new(const char *name) {
+
+    sq_outport_t *outport;
+
+    outport = malloc(sizeof(sq_outport_t));
 
     _outport_sanitize_name(outport, name);
 
     outport->jack_client = NULL;
     outport->jack_port = NULL;
     outport->buf = NULL;
+
+    return outport;
 
 }
 
@@ -80,8 +86,7 @@ sq_outport_t *sq_outport_malloc_from_json(json_object *jo_outport) {
     json_object_object_get_ex(jo_outport, "name", &jo_tmp);
     name = json_object_get_string(jo_tmp);
 
-    outport = malloc(sizeof(sq_outport_t));
-    sq_outport_init(outport, name);
+    outport = sq_outport_new(name);
 
     return outport;
 

@@ -141,7 +141,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 // </helper>
 
-void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
+sq_session_t *sq_session_new(const char *client_name, int tps) {
+
+    sq_session_t *sesh;
+
+    sesh = malloc(sizeof(sq_session_t));
 
     // initialize struct members
     sesh->go = false;
@@ -186,7 +190,10 @@ void sq_session_init(sq_session_t *sesh, const char *client_name, int tps) {
 
     sesh->is_playing = false;
 
+    return sesh;
+
 }
+
 
 void sq_session_disconnect_jack(sq_session_t *sesh) {
 
@@ -554,8 +561,7 @@ sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
     bpm = json_object_get_double(jo_tmp);
 
     // malloc and init the session
-    sesh = malloc(sizeof(sq_session_t));
-    sq_session_init(sesh, name, tps);
+    sesh = sq_session_new(name, tps);
     sq_session_set_bpm(sesh, bpm);
 
     // add the outports
