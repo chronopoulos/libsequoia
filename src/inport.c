@@ -206,4 +206,9 @@ sq_inport_t *sq_inport_malloc_from_json(json_object *jo_inport) {
 
 }
 
+void sq_inport_delete(sq_inport_t *inport) {
+
+    free(inport);
+
+}
 

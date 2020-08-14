@@ -92,3 +92,9 @@ sq_outport_t *sq_outport_malloc_from_json(json_object *jo_outport) {
 
 }
 
+void sq_outport_delete(sq_outport_t *outport) {
+
+    free(outport);
+
+}
+

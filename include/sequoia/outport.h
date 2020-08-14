@@ -42,4 +42,6 @@ char *sq_outport_get_name(sq_outport_t*);
 json_object *sq_outport_get_json(sq_outport_t*);
 sq_outport_t *sq_outport_malloc_from_json(json_object*);
 
+void sq_outport_delete(sq_outport_t*);
+
 #endif

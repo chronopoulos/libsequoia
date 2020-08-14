@@ -56,4 +56,6 @@ void _inport_serve(sq_inport_t*, jack_nframes_t);
 json_object *sq_inport_get_json(sq_inport_t*);
 sq_inport_t *sq_inport_malloc_from_json(json_object*);
 
+void sq_inport_delete(sq_inport_t*);
+
 #endif

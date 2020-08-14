@@ -846,3 +846,12 @@ sq_sequence_t *sq_sequence_malloc_from_json(json_object *jo_seq) {
 
 }
 
+void sq_sequence_delete(sq_sequence_t *seq) {
+
+    free(seq->trigs);
+    free(seq->microgrid);
+    free(seq->buf_off);
+    free(seq);
+
+}
+

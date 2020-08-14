@@ -609,3 +609,38 @@ sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
 
 }
 
+void sq_session_delete(sq_session_t *sesh) {
+
+    // frees the sq_session_t struct (but not its sequences, ports, etc)
+
+    free(sesh);
+
+}
+
+void sq_session_teardown(sq_session_t *sesh) {
+
+    // recursively frees all the malloc'd memory attributed to the session
+
+    sq_session_stop(sesh);
+    sq_session_disconnect_jack(sesh);
+
+    // sequences
+    for (int i=0; i<sesh->nseqs; i++) {
+        sq_sequence_delete(sesh->seqs[i]);
+    }
+
+    // inports
+    for (int i=0; i<sesh->ninports; i++) {
+        sq_inport_delete(sesh->inports[i]);
+    }
+
+    // outports
+    for (int i=0; i<sesh->noutports; i++) {
+        sq_outport_delete(sesh->outports[i]);
+    }
+
+    // session
+    sq_session_delete(sesh);
+
+}
+
