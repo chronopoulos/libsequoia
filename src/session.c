@@ -579,10 +579,12 @@ sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
         seq_tmp = sq_sequence_malloc_from_json(jo_tmp2);
         // outport remains null, resolve it now
         json_object_object_get_ex(jo_tmp2, "outport", &jo_tmp3);
-        name = json_object_get_string(jo_tmp3);
-        outport_tmp = sq_session_get_outport_from_name(sesh, name);
-        if (outport_tmp) {
-            sq_sequence_set_outport(seq_tmp, outport_tmp);
+        if (json_object_get_type(jo_tmp3) == json_type_string) {
+            name = json_object_get_string(jo_tmp3);
+            outport_tmp = sq_session_get_outport_from_name(sesh, name);
+            if (outport_tmp) {
+                sq_sequence_set_outport(seq_tmp, outport_tmp);
+            }
         }
         sq_session_add_sequence(sesh, seq_tmp);
     }
