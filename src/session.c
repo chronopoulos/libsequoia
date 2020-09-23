@@ -110,6 +110,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
         jack_midi_clear_buffer(outport->buf);
     }
 
+    /*
+
     jack_nframes_t nframes_left, frame_inc;
 
     nframes_left = nframes;
@@ -135,13 +137,15 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
     }
 
+    */
+
     return 0;
 
 }
 
 // </helper>
 
-sq_session_t *sq_session_new(const char *client_name, int tps) {
+sq_session_t *sq_session_new(const char *client_name) {
 
     sq_session_t *sesh;
 
@@ -149,7 +153,6 @@ sq_session_t *sq_session_new(const char *client_name, int tps) {
 
     // initialize struct members
     sesh->go = false;
-    sesh->tps = tps;
     sesh->nseqs = 0;
     sesh->frame = 0;
     sesh->ninports = 0;
@@ -335,28 +338,24 @@ void _session_set_bpm_now(sq_session_t *sesh, float bpm) {
 
     sesh->bpm = bpm;
 
-    // calculate frames per tick (fpt) (no need to cast becasue sesh->bpm is a float)
-    float fpt = (sesh->sr * SECONDS_PER_MINUTE) / (sesh->tps * sesh->bpm * STEPS_PER_BEAT);
+    // calculate frames per step (fps) (no need to cast becasue sesh->bpm is a float)
+    float fps = (sesh->sr * SECONDS_PER_MINUTE) / (sesh->bpm * STEPS_PER_BEAT);
 
     // and round to nearest int
-    sesh->fpt = round(fpt);
+    sesh->fps = round(fps);
 
-    // if an increase in tempo has lowered the fpt below the current frame index,
+    // if an increase in tempo has lowered the fps below the current frame index,
     //  then reset the frame index to avoid a runaway frame count
-    // (note that we could also achieve this using (sesh->frame >= sesh->fpt) in _process(),
-    //  but this method ensures that we don't skip a beat on tempo increases
-    if (sesh->frame >= sesh->fpt) {
+    // (note that we could also achieve this using (sesh->frame >= sesh->fps) in _process(),
+    //  but this method ensures that we don't skip a beat on tempo increases)
+    // HOWEVER it's worth considering: would we *rather* skip a beat?
+    if (sesh->frame >= sesh->fps) {
         sesh->frame = 0;
     }
 
 }
 
 void sq_session_add_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
-
-    if (seq->tps != sesh->tps) {
-        fprintf(stderr, "seq->tps doesn't match sesh->tps: %d vs %d\n", seq->tps, sesh->tps);
-        return;
-    }
 
     if (sesh->is_playing) {
 
@@ -441,12 +440,6 @@ char *sq_session_get_name(sq_session_t *sesh) {
 
 // read-only getters don't need to use ringbuffers
 
-int sq_session_get_tps(sq_session_t *sesh) {
-
-    return sesh->tps;
-
-}
-
 float sq_session_get_bpm(sq_session_t *sesh) {
 
     return sesh->bpm;
@@ -464,8 +457,6 @@ json_object *sq_session_get_json(sq_session_t *sesh) {
                             json_object_new_string(sq_session_get_name(sesh)));
     json_object_object_add(jo_session, "bpm",
                             json_object_new_double(sq_session_get_bpm(sesh)));
-    json_object_object_add(jo_session, "tps",
-                            json_object_new_int(sq_session_get_tps(sesh)));
 
     // sequences
     json_object *sequence_array = json_object_new_array();
@@ -545,7 +536,6 @@ sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
 
     struct json_object *jo_tmp, *jo_tmp2, *jo_tmp3, *jo_tmp4;
     const char *name;
-    int tps;
     double bpm;
     sq_session_t *sesh;
     sq_sequence_t *seq_tmp = NULL;
@@ -555,13 +545,11 @@ sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
     // first extract the top-level attributes
     json_object_object_get_ex(jo_session, "name", &jo_tmp);
     name = json_object_get_string(jo_tmp);
-    json_object_object_get_ex(jo_session, "tps", &jo_tmp);
-    tps = json_object_get_int(jo_tmp);
     json_object_object_get_ex(jo_session, "bpm", &jo_tmp);
     bpm = json_object_get_double(jo_tmp);
 
     // malloc and init the session
-    sesh = sq_session_new(name, tps);
+    sesh = sq_session_new(name);
     sq_session_set_bpm(sesh, bpm);
 
     // add the outports
