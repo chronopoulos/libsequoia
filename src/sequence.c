@@ -29,20 +29,6 @@
 
 // <helper>
 
-/*
-int _get_tick_index_trig(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
-
-    // TODO: trig = seq->trigs + step_index ?
-
-    int tick_index = (step_index + trig->microtime) * seq->tps;
-    if (tick_index < 0) tick_index = 0;
-    if (tick_index >= seq->nticks) tick_index = seq->nticks - 1;
-
-    return tick_index;
-
-}
-*/
-
 void _sequence_ringbuffer_write(sq_sequence_t *seq, _sequence_ctrl_msg_t *msg) {
 
     int avail = jack_ringbuffer_write_space(seq->rb);
@@ -175,96 +161,82 @@ void _sequence_reset_now(sq_sequence_t *seq) {
 
 }
 
-void _sequence_step(sq_sequence_t *seq, jack_nframes_t idx) {
+_midiEvent MEV_NULL = {NULL, 0, 0, 0, 0};
 
-    /* this should called once per sequence, every time the session frame
-        counter crosses a step boundary */
+_midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
+                        jack_nframes_t start, jack_nframes_t len, jack_nframes_t buf_offset) {
 
-    unsigned char *midi_msg_write_ptr;
-    float dice;
     sq_trigger_t *trig;
-    int widx_off;
+    jack_nframes_t frame_trig;
+    _midiEvent mev; // tmp value
+
+    if (start + len > fps) {   // this should never happen
+        fprintf(stderr, "_sequence_process() crossed step boundary: %s\n", seq->name);
+        return MEV_NULL;
+    }
 
     // serve any control messages in the ringbuffer
     _sequence_serve_ctrl_msgs(seq);
 
-    /*
+    // output JACK MIDI
+    if (!seq->mute && seq->outport) {
+        trig = seq->trigs + seq->step;
+        if (trig->type != TRIG_NULL) {
+            if (trig->probability >= ((float) random()) / RAND_MAX) {
+                frame_trig = fps * (0.5 + trig->microtime);  // round down
+                if ((frame_trig >= start) && (frame_trig < start + len)) {
+
+                    mev.buf = seq->outport->buf;
+                    mev.time = frame_trig - start;
+                    if (trig->type == TRIG_NOTE) {
+                        mev.status = 143 + trig->channel;   // note on
+                        mev.data1 = trig->note + seq->transpose;
+                        mev.data2 = trig->velocity;
+                    } else if (trig->type == TRIG_CC) {
+                        mev.status = 175 + trig->channel;   // control change
+                        mev.data1 = trig->cc_number;
+                        mev.data2 = trig->cc_value;
+                    }
+
+                    return mev;
+
+                }
+            }
+        }
+    }
+
+    return MEV_NULL;
+
+}
+
+void _sequence_step(sq_sequence_t *seq) {
 
     if (seq->idiv == 0) { // clock divide
 
-        // handle any triggers from the microgrid
-        if (!seq->mute && seq->outport) {
-
-            if ((trig = seq->microgrid[seq->tick])) { // if non-NULL
-
-                dice = ((float) random()) / RAND_MAX;
-                if (dice <= trig->probability) {
-
-                    midi_msg_write_ptr = jack_midi_event_reserve(seq->outport->buf, idx, 3);
-                    if (trig->type == TRIG_NOTE) {
-
-                        // note on
-                        midi_msg_write_ptr[0] = 143 + trig->channel;
-                        midi_msg_write_ptr[1] = trig->note + seq->transpose;
-                        midi_msg_write_ptr[2] = trig->velocity;
-
-                        // note off
-                        widx_off = (seq->ridx_off + (int)roundl(trig->length * seq->tps)) % seq->nticks;
-                        seq->buf_off[widx_off][0] = 127 + trig->channel;
-                        seq->buf_off[widx_off][1] = trig->note + seq->transpose;
-                        seq->buf_off[widx_off][2] = trig->velocity;
-
-                    } else if (trig->type == TRIG_CC) {
-
-                        // control change (CC)
-                        midi_msg_write_ptr[0] = 175 + trig->channel;
-                        midi_msg_write_ptr[1] = trig->cc_number;
-                        midi_msg_write_ptr[2] = trig->cc_value;
-
-                    }
-
-                }
-
-            }
-
+        // increment
+        if (seq->step == seq->last) {
+            seq->step = seq->first;
+        } else if (++(seq->step) == seq->nsteps) {
+            seq->step = 0;
         }
 
-        // increment tick index
-        if (++(seq->tick) == seq->nticks) {
-            seq->tick = 0;
-        }
-
-        // if we've crossed a step boundary..
-        if ((seq->tick % seq->tps) == 0) {
-
-            // handle first/last
-            int step = seq->tick / seq->tps;
-            if (((seq->last+1) % seq->nsteps) == step) {
-                step = seq->first;
-                seq->tick = step * seq->tps;
-            }
-
-            // and send a notification
-            if (seq->noti_enable) {
-                seq->noti.playhead = step;
-                seq->noti.playhead_new = true;
-            }
-
+        // and send a notification
+        if (seq->noti_enable) {
+            seq->noti.playhead = seq->step;
+            seq->noti.playhead_new = true;
         }
 
     }
 
     if (++seq->idiv >= seq->div) seq->idiv = 0; // clock divide
 
-    */
-
 }
 
 void _sequence_serve_off_buffer(sq_sequence_t *seq, jack_nframes_t idx) {
 
-    unsigned char *midi_msg_write_ptr;
-
     /*
+
+    unsigned char *midi_msg_write_ptr;
 
     // handle any events in buf_off
     if (seq->buf_off[seq->ridx_off][0]) {  // if status byte != 0

@@ -50,6 +50,14 @@ typedef struct {
 } _sequence_ctrl_msg_t;
 
 typedef struct {
+    void *buf;              // JACK MIDI port buffer
+    jack_nframes_t time;    // buffer frame index
+    unsigned char status;   // MIDI status byte
+    unsigned char data1;    // MIDI data byte
+    unsigned char data2;    // MIDI data byte
+} _midiEvent;
+
+typedef struct {
 
     bool playhead_new;
     int playhead;
@@ -103,7 +111,9 @@ typedef struct {
 sq_sequence_t *sq_sequence_new(int);
 void sq_sequence_noti_init(sq_sequence_noti_t*);
 
-void _sequence_step(sq_sequence_t*, jack_nframes_t);
+_midiEvent _sequence_process(sq_sequence_t*, jack_nframes_t, jack_nframes_t,
+                                        jack_nframes_t, jack_nframes_t);
+void _sequence_step(sq_sequence_t*);
 void _sequence_serve_off_buffer(sq_sequence_t*, jack_nframes_t);
 void _sequence_reset_now(sq_sequence_t*);
 
