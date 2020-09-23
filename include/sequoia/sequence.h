@@ -77,8 +77,6 @@ typedef struct {
     char name[MAX_SEQ_NAME_LEN + 1];
     int transpose;
     sq_trigger_t *trigs;
-    sq_trigger_t **microgrid;
-    midi_packet *buf_off;
     int ridx_off;
 
     // TBD
@@ -87,10 +85,8 @@ typedef struct {
     // this is only touched by UI
     bool is_playing;
 
-    int tps; // ticks per step
     int nsteps;
-    int nticks;
-    int tick;
+    int step;
 
     jack_ringbuffer_t *rb;
 
@@ -104,10 +100,10 @@ typedef struct {
 
 } sq_sequence_t;
 
-sq_sequence_t *sq_sequence_new(int, int);
+sq_sequence_t *sq_sequence_new(int);
 void sq_sequence_noti_init(sq_sequence_noti_t*);
 
-void _sequence_tick(sq_sequence_t*, jack_nframes_t);
+void _sequence_step(sq_sequence_t*, jack_nframes_t);
 void _sequence_serve_off_buffer(sq_sequence_t*, jack_nframes_t);
 void _sequence_reset_now(sq_sequence_t*);
 
@@ -149,7 +145,6 @@ bool sq_sequence_read_new_clockdivide(sq_sequence_t*, int*);
 bool sq_sequence_read_new_mute(sq_sequence_t*, bool*);
 
 int sq_sequence_get_nsteps(sq_sequence_t*);
-int sq_sequence_get_tps(sq_sequence_t*);
 bool sq_sequence_get_mute(sq_sequence_t*);
 int sq_sequence_get_transpose(sq_sequence_t*);
 int sq_sequence_get_clockdivide(sq_sequence_t*);
