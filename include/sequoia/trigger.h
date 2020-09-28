@@ -24,6 +24,8 @@
 
 #include <json/json.h>
 
+#define TRIG_MAX_LENGTH 16.0
+
 enum trig_type {TRIG_NULL, TRIG_NOTE, TRIG_CC};
 
 typedef struct {
