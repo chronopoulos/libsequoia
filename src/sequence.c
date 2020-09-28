@@ -179,7 +179,7 @@ _midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
     _sequence_serve_ctrl_msgs(seq);
 
     // output JACK MIDI
-    if (!seq->mute && seq->outport) {
+    if (!seq->mute && seq->outport && !seq->idiv) {
         trig = seq->trigs + seq->step;
         if (trig->type != TRIG_NULL) {
             if (trig->probability >= ((float) random()) / RAND_MAX) {
@@ -211,7 +211,9 @@ _midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
 
 void _sequence_step(sq_sequence_t *seq) {
 
-    if (seq->idiv == 0) { // clock divide
+    seq->idiv++;
+
+    if (seq->idiv == seq->div) {
 
         // increment
         if (seq->step == seq->last) {
@@ -226,9 +228,10 @@ void _sequence_step(sq_sequence_t *seq) {
             seq->noti.playhead_new = true;
         }
 
-    }
+        // and reset the counter
+        seq->idiv = 0;
 
-    if (++seq->idiv >= seq->div) seq->idiv = 0; // clock divide
+    }
 
 }
 
