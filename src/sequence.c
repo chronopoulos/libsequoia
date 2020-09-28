@@ -92,13 +92,6 @@ sq_sequence_t *sq_sequence_new(int nsteps) {
         sq_trigger_init(seq->trigs + i);
     }
 
-    /*
-    seq->buf_off = malloc(seq->nticks * sizeof(midi_packet));
-    for(int i=0; i<seq->nticks; i++) {
-        seq->buf_off[i][0] = 0;
-    }
-    */
-
     // allocate and lock ringbuffer (universal ringbuffer length?)
     seq->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(_sequence_ctrl_msg_t));
     int err = jack_ringbuffer_mlock(seq->rb);
@@ -119,7 +112,6 @@ sq_sequence_t *sq_sequence_new(int nsteps) {
     sq_sequence_noti_init(&seq->noti);
     seq->noti_enable = false;
 
-    seq->ridx_off = 0;
     _sequence_reset_now(seq);
 
     return seq;
@@ -161,8 +153,6 @@ void _sequence_reset_now(sq_sequence_t *seq) {
 
 }
 
-_midiEvent MEV_NULL = {NULL, 0, 0, 0, 0};
-
 _midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
                         jack_nframes_t start, jack_nframes_t len, jack_nframes_t buf_offset) {
 
@@ -190,6 +180,7 @@ _midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
                     mev.time = frame_trig - start;
                     if (trig->type == TRIG_NOTE) {
                         mev.status = 143 + trig->channel;   // note on
+                        mev.length = trig->length * fps;
                         mev.data1 = trig->note + seq->transpose;
                         mev.data2 = trig->velocity;
                     } else if (trig->type == TRIG_CC) {
@@ -232,30 +223,6 @@ void _sequence_step(sq_sequence_t *seq) {
         seq->idiv = 0;
 
     }
-
-}
-
-void _sequence_serve_off_buffer(sq_sequence_t *seq, jack_nframes_t idx) {
-
-    /*
-
-    unsigned char *midi_msg_write_ptr;
-
-    // handle any events in buf_off
-    if (seq->buf_off[seq->ridx_off][0]) {  // if status byte != 0
-        if (seq->outport->buf) {
-            midi_msg_write_ptr = jack_midi_event_reserve(seq->outport->buf, idx, 3);
-            memcpy(midi_msg_write_ptr, seq->buf_off[seq->ridx_off], 3);
-            seq->buf_off[seq->ridx_off][0] = 0;  // clear this event
-        }
-    }
-
-    // increment ridx_off
-    if (++(seq->ridx_off) == seq->nticks) {
-        seq->ridx_off = 0;
-    }
-
-    */
 
 }
 

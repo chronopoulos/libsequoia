@@ -184,7 +184,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
     _midiEvent mevs[MAX_NSEQ];
     size_t len_mevs = 0;
-    _midiEvent mev;    // temp value
+    _midiEvent mev;     // _midiEvent temp variable
+    _midiEvent *mevp;   // _midiEvent* temp variable
 
     if (sesh->go) {
 
@@ -208,16 +209,37 @@ static int _process(jack_nframes_t nframes, void *arg) {
         // sort mevs
         _mergeSort(mevs, len_mevs);
 
-        // send them off
+        // handle mevs
         for (size_t i=0; i<len_mevs; i++) {
-            mev = mevs[i];
-            midi_msg_write_ptr = jack_midi_event_reserve(mev.buf, mev.time, 3);
-            midi_msg_write_ptr[0] = mev.status;
-            midi_msg_write_ptr[1] = mev.data1;
-            midi_msg_write_ptr[2] = mev.data2;
+
+            // note on
+            mevp = mevs + i;
+            midi_msg_write_ptr = jack_midi_event_reserve(mevp->buf, mevp->time, 3);
+            midi_msg_write_ptr[0] = mevp->status;
+            midi_msg_write_ptr[1] = mevp->data1;
+            midi_msg_write_ptr[2] = mevp->data2;
+
+            // queue note off
+            mevp->status -= 16;   // turn note-on into note-off on same channel
+            sesh->buf_off[(sesh->idx_off + mevp->time + mevp->length) % sesh->len_off] = *mevp;
+            // TODO replace 3000 w/ length
+
         }
 
     }
+
+    // cylce through note-off buffer
+    for (size_t i=0; i<nframes; i++) {
+        mevp = sesh->buf_off + ((sesh->idx_off + i) % sesh->len_off);
+        if (mevp->buf) {
+            midi_msg_write_ptr = jack_midi_event_reserve(mevp->buf, i, 3);
+            midi_msg_write_ptr[0] = mevp->status;
+            midi_msg_write_ptr[1] = mevp->data1;
+            midi_msg_write_ptr[2] = mevp->data2;
+            *mevp = MEV_NULL;   // clear this note-off
+        }
+    }
+    sesh->idx_off = (sesh->idx_off + nframes) % sesh->len_off;
 
     return 0;
 
@@ -236,6 +258,7 @@ sq_session_t *sq_session_new(const char *client_name) {
     sesh->nseqs = 0;
     sesh->ninports = 0;
     sesh->noutports = 0;
+    sesh->is_playing = false;
 
     // seed random number generator with system time
     srandom(time(NULL));
@@ -266,13 +289,19 @@ sq_session_t *sq_session_new(const char *client_name) {
         exit(1);
     }
 
+    // allocate and initialize note-off buffer
+    sesh->len_off = sesh->fps * TRIG_MAX_LENGTH;
+    sesh->buf_off = malloc(sizeof(_midiEvent) * sesh->len_off);
+    for (size_t i=0; i<sesh->len_off; i++) {
+        sesh->buf_off[i] = MEV_NULL;
+    }
+    sesh->idx_off = 0;
+
     // activate jack client
 	if (jack_activate(sesh->jack_client)) {
 		fprintf(stderr, "failed to activate client\n");
         exit(1);
 	}
-
-    sesh->is_playing = false;
 
     return sesh;
 

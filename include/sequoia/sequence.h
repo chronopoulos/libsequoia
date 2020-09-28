@@ -31,6 +31,8 @@
 #include "outport.h"
 
 #define MAX_SEQ_NAME_LEN 255
+#define MEV_NULL (_midiEvent) {NULL, 0, 0, 0, 0, 0}
+
 
 typedef jack_midi_data_t midi_packet[3]; // equivalent to 3 unsigned chars
 
@@ -52,6 +54,7 @@ typedef struct {
 typedef struct {
     void *buf;              // JACK MIDI port buffer
     jack_nframes_t time;    // buffer frame index
+    jack_nframes_t length;  // length of note (for note-on only)
     unsigned char status;   // MIDI status byte
     unsigned char data1;    // MIDI data byte
     unsigned char data2;    // MIDI data byte
@@ -85,7 +88,6 @@ typedef struct {
     char name[MAX_SEQ_NAME_LEN + 1];
     int transpose;
     sq_trigger_t *trigs;
-    int ridx_off;
 
     // TBD
     sq_outport_t *outport;
@@ -114,7 +116,6 @@ void sq_sequence_noti_init(sq_sequence_noti_t*);
 _midiEvent _sequence_process(sq_sequence_t*, jack_nframes_t, jack_nframes_t,
                                         jack_nframes_t, jack_nframes_t);
 void _sequence_step(sq_sequence_t*);
-void _sequence_serve_off_buffer(sq_sequence_t*, jack_nframes_t);
 void _sequence_reset_now(sq_sequence_t*);
 
 void sq_sequence_set_name(sq_sequence_t*, const char*);

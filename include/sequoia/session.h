@@ -25,8 +25,7 @@
 #include <stdbool.h>
 #include <jack/jack.h>
 #include <jack/midiport.h>
-#include <json/json.h>
-
+#include <json/json.h> 
 #include "sequence.h"
 #include "outport.h"
 #include "inport.h"
@@ -69,6 +68,7 @@ typedef struct {
 
     // constant
     int fps; // frames per step
+
     jack_client_t *jack_client;
     jack_nframes_t sr; // sample rate
     jack_nframes_t bs; // buffer size
@@ -81,6 +81,11 @@ typedef struct {
     sq_inport_t *inports[MAX_NINPORTS];
     sq_outport_t *outports[MAX_NOUTPORTS];
     int ninports, noutports;
+
+    // note-off buffer
+    _midiEvent *buf_off;
+    size_t len_off;
+    size_t idx_off;
 
 } sq_session_t;
 
