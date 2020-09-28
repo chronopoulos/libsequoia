@@ -601,7 +601,7 @@ sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
             name = json_object_get_string(jo_tmp4);
             seq_tmp = sq_session_get_sequence_from_name(sesh, name);
             if (seq_tmp) {
-                _inport_add_sequence_now(inport_tmp, seq_tmp);
+                sq_inport_add_sequence(inport_tmp, seq_tmp);
             }
         }
         sq_session_register_inport(sesh, inport_tmp);

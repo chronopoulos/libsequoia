@@ -77,15 +77,14 @@ void sq_inport_set_type(sq_inport_t *inport, enum inport_type type) {
 
 }
 
-void _inport_add_sequence_now(sq_inport_t *inport, sq_sequence_t *seq) {
+void sq_inport_add_sequence(sq_inport_t *inport, sq_sequence_t *seq) {
 
     if (inport->nseqs >= INPORT_MAX_NSEQ) {
         fprintf(stderr, "max number of sequences per inport reached: %d\n", INPORT_MAX_NSEQ);
         return;
     }
 
-    inport->seqs[inport->nseqs] = seq;
-    inport->nseqs++;
+    inport->seqs[inport->nseqs++] = seq;
 
 }
 
