@@ -50,6 +50,7 @@ void sq_trigger_set_note(sq_trigger_t *trig, int note, int velocity, float lengt
     trig->note = note;
     trig->velocity = velocity;
     trig->length = length;
+    if (trig->length > TRIG_MAX_LENGTH) trig->length = TRIG_MAX_LENGTH;
 
 }
 

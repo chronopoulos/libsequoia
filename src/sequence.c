@@ -29,18 +29,6 @@
 
 // <helper>
 
-int _get_tick_index_trig(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
-
-    // TODO: trig = seq->trigs + step_index ?
-
-    int tick_index = (step_index + trig->microtime) * seq->tps;
-    if (tick_index < 0) tick_index = 0;
-    if (tick_index >= seq->nticks) tick_index = seq->nticks - 1;
-
-    return tick_index;
-
-}
-
 void _sequence_ringbuffer_write(sq_sequence_t *seq, _sequence_ctrl_msg_t *msg) {
 
     int avail = jack_ringbuffer_write_space(seq->rb);
@@ -87,14 +75,13 @@ void _sequence_serve_ctrl_msgs(sq_sequence_t *seq) {
 
 // </helper>
 
-sq_sequence_t *sq_sequence_new(int nsteps, int tps) {
+sq_sequence_t *sq_sequence_new(int nsteps) {
 
     sq_sequence_t *seq;
 
     seq = malloc(sizeof(sq_sequence_t));
 
     seq->nsteps = nsteps;
-    seq->tps = tps;
     seq->name[0] = '\0';
     seq->transpose = 0;
 
@@ -103,18 +90,6 @@ sq_sequence_t *sq_sequence_new(int nsteps, int tps) {
     seq->trigs = malloc(seq->nsteps * sizeof(sq_trigger_t));
     for (int i=0; i<seq->nsteps; i++) {
         sq_trigger_init(seq->trigs + i);
-    }
-
-    seq->nticks = seq->nsteps * seq->tps;
-
-    seq->microgrid = malloc(seq->nticks * sizeof(sq_trigger_t*));
-    for(int i=0; i<seq->nticks; i++) {
-        seq->microgrid[i] = NULL;
-    }
-
-    seq->buf_off = malloc(seq->nticks * sizeof(midi_packet));
-    for(int i=0; i<seq->nticks; i++) {
-        seq->buf_off[i][0] = 0;
     }
 
     // allocate and lock ringbuffer (universal ringbuffer length?)
@@ -137,7 +112,6 @@ sq_sequence_t *sq_sequence_new(int nsteps, int tps) {
     sq_sequence_noti_init(&seq->noti);
     seq->noti_enable = false;
 
-    seq->ridx_off = 0;
     _sequence_reset_now(seq);
 
     return seq;
@@ -170,7 +144,7 @@ void sq_sequence_noti_init(sq_sequence_noti_t *noti) {
 void _sequence_reset_now(sq_sequence_t *seq) {
 
     seq->idiv = 0;
-    seq->tick = seq->first * seq->tps;
+    seq->step = seq->first;
 
     if (seq->noti_enable) {
         seq->noti.playhead = seq->first;
@@ -179,103 +153,75 @@ void _sequence_reset_now(sq_sequence_t *seq) {
 
 }
 
-void _sequence_tick(sq_sequence_t *seq, jack_nframes_t idx) {
+_midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
+                        jack_nframes_t start, jack_nframes_t len, jack_nframes_t buf_offset) {
 
-    /* this should called once per sequence, every time the session frame
-        counter crosses a tick boundary */
-
-    unsigned char *midi_msg_write_ptr;
-    float dice;
     sq_trigger_t *trig;
-    int widx_off;
+    jack_nframes_t frame_trig;
+    _midiEvent mev; // tmp value
+
+    if (start + len > fps) {   // this should never happen
+        fprintf(stderr, "_sequence_process() crossed step boundary: %s\n", seq->name);
+        return MEV_NULL;
+    }
 
     // serve any control messages in the ringbuffer
     _sequence_serve_ctrl_msgs(seq);
 
-    if (seq->idiv == 0) { // clock divide
+    // output JACK MIDI
+    if (!seq->mute && seq->outport && !seq->idiv) {
+        trig = seq->trigs + seq->step;
+        if (trig->type != TRIG_NULL) {
+            if (trig->probability >= ((float) random()) / RAND_MAX) {
+                frame_trig = fps * (0.5 + trig->microtime);  // round down
+                if ((frame_trig >= start) && (frame_trig < start + len)) {
 
-        // handle any triggers from the microgrid
-        if (!seq->mute && seq->outport) {
-
-            if ((trig = seq->microgrid[seq->tick])) { // if non-NULL
-
-                dice = ((float) random()) / RAND_MAX;
-                if (dice <= trig->probability) {
-
-                    midi_msg_write_ptr = jack_midi_event_reserve(seq->outport->buf, idx, 3);
+                    mev.buf = seq->outport->buf;
+                    mev.time = frame_trig - start;
                     if (trig->type == TRIG_NOTE) {
-
-                        // note on
-                        midi_msg_write_ptr[0] = 143 + trig->channel;
-                        midi_msg_write_ptr[1] = trig->note + seq->transpose;
-                        midi_msg_write_ptr[2] = trig->velocity;
-
-                        // note off
-                        widx_off = (seq->ridx_off + (int)roundl(trig->length * seq->tps)) % seq->nticks;
-                        seq->buf_off[widx_off][0] = 127 + trig->channel;
-                        seq->buf_off[widx_off][1] = trig->note + seq->transpose;
-                        seq->buf_off[widx_off][2] = trig->velocity;
-
+                        mev.status = 143 + trig->channel;   // note on
+                        mev.length = trig->length * fps;
+                        mev.data1 = trig->note + seq->transpose;
+                        mev.data2 = trig->velocity;
                     } else if (trig->type == TRIG_CC) {
-
-                        // control change (CC)
-                        midi_msg_write_ptr[0] = 175 + trig->channel;
-                        midi_msg_write_ptr[1] = trig->cc_number;
-                        midi_msg_write_ptr[2] = trig->cc_value;
-
+                        mev.status = 175 + trig->channel;   // control change
+                        mev.data1 = trig->cc_number;
+                        mev.data2 = trig->cc_value;
                     }
 
+                    return mev;
+
                 }
-
             }
-
         }
-
-        // increment tick index
-        if (++(seq->tick) == seq->nticks) {
-            seq->tick = 0;
-        }
-
-        // if we've crossed a step boundary..
-        if ((seq->tick % seq->tps) == 0) {
-
-            // handle first/last
-            int step = seq->tick / seq->tps;
-            if (((seq->last+1) % seq->nsteps) == step) {
-                step = seq->first;
-                seq->tick = step * seq->tps;
-            }
-
-            // and send a notification
-            if (seq->noti_enable) {
-                seq->noti.playhead = step;
-                seq->noti.playhead_new = true;
-            }
-
-        }
-
     }
 
-    if (++seq->idiv >= seq->div) seq->idiv = 0; // clock divide
+    return MEV_NULL;
 
 }
 
-void _sequence_serve_off_buffer(sq_sequence_t *seq, jack_nframes_t idx) {
+void _sequence_step(sq_sequence_t *seq) {
 
-    unsigned char *midi_msg_write_ptr;
+    seq->idiv++;
 
-    // handle any events in buf_off
-    if (seq->buf_off[seq->ridx_off][0]) {  // if status byte != 0
-        if (seq->outport->buf) {
-            midi_msg_write_ptr = jack_midi_event_reserve(seq->outport->buf, idx, 3);
-            memcpy(midi_msg_write_ptr, seq->buf_off[seq->ridx_off], 3);
-            seq->buf_off[seq->ridx_off][0] = 0;  // clear this event
+    if (seq->idiv == seq->div) {
+
+        // increment
+        if (seq->step == seq->last) {
+            seq->step = seq->first;
+        } else if (++(seq->step) == seq->nsteps) {
+            seq->step = 0;
         }
-    }
 
-    // increment ridx_off
-    if (++(seq->ridx_off) == seq->nticks) {
-        seq->ridx_off = 0;
+        // and send a notification
+        if (seq->noti_enable) {
+            seq->noti.playhead = seq->step;
+            seq->noti.playhead_new = true;
+        }
+
+        // and reset the counter
+        seq->idiv = 0;
+
     }
 
 }
@@ -325,19 +271,7 @@ void _sequence_set_trig_now(sq_sequence_t *seq, int step_index, sq_trigger_t *tr
         return;
     }
 
-    int tick_index_old, tick_index_new;
-
-    // clear the old index
-    tick_index_old = _get_tick_index_trig(seq, step_index, seq->trigs + step_index);
-    seq->microgrid[tick_index_old] = NULL;
-
     memcpy(seq->trigs + step_index, trig, sizeof(sq_trigger_t));
-
-    if (trig->type != TRIG_NULL) {
-        // write the new index
-        tick_index_new = _get_tick_index_trig(seq, step_index, trig);
-        seq->microgrid[tick_index_new] = seq->trigs + step_index;
-    }
 
 }
 
@@ -368,7 +302,6 @@ void _sequence_clear_trig_now(sq_sequence_t *seq, int step_index) {
     }
 
     sq_trigger_t *trig = seq->trigs + step_index;
-    seq->microgrid[_get_tick_index_trig(seq, step_index, trig)] = NULL;
     trig->type = TRIG_NULL;
 
 }
@@ -422,13 +355,12 @@ void sq_sequence_set_playhead(sq_sequence_t *seq, int ph) {
 
 void _sequence_set_playhead_now(sq_sequence_t *seq, int ph) {
 
-    if ( (ph < 0) || (ph >= seq->nticks) ) {
+    if ( (ph < 0) || (ph >= seq->nsteps) ) {
         fprintf(stderr, "playhead value out of range: %d\n", ph);
         return;
     }
 
-    int stick = seq->tick % seq->tps;
-    seq->tick = ph * seq->tps + stick;
+    seq->step = ph;
 
     if (seq->noti_enable) {
         seq->noti.playhead = ph;
@@ -457,7 +389,7 @@ void sq_sequence_set_first(sq_sequence_t *seq, int first) {
 
 void _sequence_set_first_now(sq_sequence_t *seq, int first) {
 
-    if ( (first < 0) || (first >= seq->nticks) ) {
+    if ( (first < 0) || (first >= seq->nsteps) ) {
         fprintf(stderr, "first value out of range: %d\n", first);
         return;
     }
@@ -492,7 +424,7 @@ void sq_sequence_set_last(sq_sequence_t *seq, int last) {
 
 void _sequence_set_last_now(sq_sequence_t *seq, int last) {
 
-    if ( (last < 0) || (last >= seq->nticks) ) {
+    if ( (last < 0) || (last >= seq->nsteps) ) {
         fprintf(stderr, "last value out of range: %d\n", last);
         return;
     }
@@ -705,12 +637,6 @@ int sq_sequence_get_nsteps(sq_sequence_t *seq) {
 
 }
 
-int sq_sequence_get_tps(sq_sequence_t *seq) {
-
-    return seq->tps;
-
-}
-
 bool sq_sequence_get_mute(sq_sequence_t *seq) {
 
     return seq->mute;
@@ -753,9 +679,6 @@ json_object *sq_sequence_get_json(sq_sequence_t *seq) {
     json_object_object_add(jo_sequence, "nsteps",
                             json_object_new_int(sq_sequence_get_nsteps(seq)));
 
-    json_object_object_add(jo_sequence, "tps",
-                            json_object_new_int(sq_sequence_get_tps(seq)));
-
     json_object_object_add(jo_sequence, "mute",
                             json_object_new_boolean(sq_sequence_get_mute(seq)));
 
@@ -792,7 +715,7 @@ sq_sequence_t *sq_sequence_malloc_from_json(json_object *jo_seq) {
 
     struct json_object *jo_tmp, *jo_trig;
     const char *name;
-    int nsteps, tps, transpose, clockdivide, first, last;
+    int nsteps, transpose, clockdivide, first, last;
     bool mute;
     sq_sequence_t *seq;
     sq_trigger_t trig;
@@ -804,9 +727,6 @@ sq_sequence_t *sq_sequence_malloc_from_json(json_object *jo_seq) {
 
     json_object_object_get_ex(jo_seq, "nsteps", &jo_tmp);
     nsteps = json_object_get_int(jo_tmp);
-
-    json_object_object_get_ex(jo_seq, "tps", &jo_tmp);
-    tps = json_object_get_int(jo_tmp);
 
     json_object_object_get_ex(jo_seq, "mute", &jo_tmp);
     mute = json_object_get_boolean(jo_tmp);
@@ -825,7 +745,7 @@ sq_sequence_t *sq_sequence_malloc_from_json(json_object *jo_seq) {
 
     // malloc and init the sequence
 
-    seq = sq_sequence_new(nsteps, tps);
+    seq = sq_sequence_new(nsteps);
     sq_sequence_set_name(seq, name);
     sq_sequence_set_mute(seq, mute);
     sq_sequence_set_transpose(seq, transpose);
@@ -849,8 +769,6 @@ sq_sequence_t *sq_sequence_malloc_from_json(json_object *jo_seq) {
 void sq_sequence_delete(sq_sequence_t *seq) {
 
     free(seq->trigs);
-    free(seq->microgrid);
-    free(seq->buf_off);
     free(seq);
 
 }

@@ -31,6 +31,8 @@
 #include "outport.h"
 
 #define MAX_SEQ_NAME_LEN 255
+#define MEV_NULL (_midiEvent) {NULL, 0, 0, 0, 0, 0}
+
 
 typedef jack_midi_data_t midi_packet[3]; // equivalent to 3 unsigned chars
 
@@ -48,6 +50,15 @@ typedef struct {
     sq_trigger_t *vp;
 
 } _sequence_ctrl_msg_t;
+
+typedef struct {
+    void *buf;              // JACK MIDI port buffer
+    jack_nframes_t time;    // buffer frame index
+    jack_nframes_t length;  // length of note (for note-on only)
+    unsigned char status;   // MIDI status byte
+    unsigned char data1;    // MIDI data byte
+    unsigned char data2;    // MIDI data byte
+} _midiEvent;
 
 typedef struct {
 
@@ -77,9 +88,6 @@ typedef struct {
     char name[MAX_SEQ_NAME_LEN + 1];
     int transpose;
     sq_trigger_t *trigs;
-    sq_trigger_t **microgrid;
-    midi_packet *buf_off;
-    int ridx_off;
 
     // TBD
     sq_outport_t *outport;
@@ -87,10 +95,8 @@ typedef struct {
     // this is only touched by UI
     bool is_playing;
 
-    int tps; // ticks per step
     int nsteps;
-    int nticks;
-    int tick;
+    int step;
 
     jack_ringbuffer_t *rb;
 
@@ -104,11 +110,12 @@ typedef struct {
 
 } sq_sequence_t;
 
-sq_sequence_t *sq_sequence_new(int, int);
+sq_sequence_t *sq_sequence_new(int);
 void sq_sequence_noti_init(sq_sequence_noti_t*);
 
-void _sequence_tick(sq_sequence_t*, jack_nframes_t);
-void _sequence_serve_off_buffer(sq_sequence_t*, jack_nframes_t);
+_midiEvent _sequence_process(sq_sequence_t*, jack_nframes_t, jack_nframes_t,
+                                        jack_nframes_t, jack_nframes_t);
+void _sequence_step(sq_sequence_t*);
 void _sequence_reset_now(sq_sequence_t*);
 
 void sq_sequence_set_name(sq_sequence_t*, const char*);
@@ -149,7 +156,6 @@ bool sq_sequence_read_new_clockdivide(sq_sequence_t*, int*);
 bool sq_sequence_read_new_mute(sq_sequence_t*, bool*);
 
 int sq_sequence_get_nsteps(sq_sequence_t*);
-int sq_sequence_get_tps(sq_sequence_t*);
 bool sq_sequence_get_mute(sq_sequence_t*);
 int sq_sequence_get_transpose(sq_sequence_t*);
 int sq_sequence_get_clockdivide(sq_sequence_t*);

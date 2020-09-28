@@ -25,8 +25,7 @@
 #include <stdbool.h>
 #include <jack/jack.h>
 #include <jack/midiport.h>
-#include <json/json.h>
-
+#include <json/json.h> 
 #include "sequence.h"
 #include "outport.h"
 #include "inport.h"
@@ -68,8 +67,8 @@ typedef struct {
     bool is_playing;
 
     // constant
-    int tps; // ticks per step
-    int fpt; // frames per tick
+    int fps; // frames per step
+
     jack_client_t *jack_client;
     jack_nframes_t sr; // sample rate
     jack_nframes_t bs; // buffer size
@@ -83,9 +82,14 @@ typedef struct {
     sq_outport_t *outports[MAX_NOUTPORTS];
     int ninports, noutports;
 
+    // note-off buffer
+    _midiEvent *buf_off;
+    size_t len_off;
+    size_t idx_off;
+
 } sq_session_t;
 
-sq_session_t *sq_session_new(const char*, int);
+sq_session_t *sq_session_new(const char*);
 void sq_session_disconnect_jack(sq_session_t*);
 int sq_session_register_outport(sq_session_t *, sq_outport_t*);
 int sq_session_register_inport(sq_session_t *, sq_inport_t*);
@@ -107,7 +111,6 @@ void _session_rm_sequence_now(sq_session_t*, sq_sequence_t*);
 
 char *sq_session_get_name(sq_session_t*);
 
-int sq_session_get_tps(sq_session_t*);
 float sq_session_get_bpm(sq_session_t*);
 
 json_object *sq_session_get_json(sq_session_t*);

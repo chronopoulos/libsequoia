@@ -45,6 +45,12 @@ void _session_ringbuffer_write(sq_session_t *sesh, _session_ctrl_msg_t *msg) {
 
 }
 
+void _session_reset_frame_counter(sq_session_t *sesh) {
+
+    sesh->frame = sesh->fps / 2;    // frame counter
+
+}
+
 void _session_serve_ctrl_msgs(sq_session_t *sesh) {
 
     int avail = jack_ringbuffer_read_space(sesh->rb);
@@ -66,6 +72,7 @@ void _session_serve_ctrl_msgs(sq_session_t *sesh) {
                     sesh->seqs[i]->is_playing = false;
                     _sequence_reset_now(sesh->seqs[i]);
                 }
+                _session_reset_frame_counter(sesh);
             }
 
         } else if (msg.param == SESSION_BPM) {
@@ -85,6 +92,66 @@ void _session_serve_ctrl_msgs(sq_session_t *sesh) {
         avail -= sizeof(_session_ctrl_msg_t);
 
     }
+
+}
+
+static void _merge(_midiEvent *arr, size_t lenL, size_t lenR) {
+
+    // L goes from arr[0,lenL)
+    // R goes from arr[lenL,lenL+lenR)
+
+    size_t i, iL, iR;
+    _midiEvent L[lenL], R[lenR];
+    _midiEvent tvL, tvR;   // temp values
+
+    // copy into local temp arrays
+    for (i=0; i<lenL; i++) {
+        L[i] = arr[i];
+    }
+    for (i=0; i<lenR; i++) {
+        R[i] = arr[lenL + i];
+    }
+
+    // fill the original array with ordered data from the temp arrays
+    iL=0;
+    iR=0;
+    for (i=0; i<(lenL+lenR); i++) {
+
+        if (iL >= lenL) {
+            arr[i] = R[iR];
+            iR++;
+        } else if (iR >= lenR) {
+            arr[i] = L[iL];
+            iL++;
+        } else {
+            tvL = L[iL];
+            tvR = R[iR];
+            if (tvL.time <= tvR.time) {
+                arr[i] = tvL;
+                iL++;
+            } else {
+                arr[i] = tvR;
+                iR++;
+            }
+        }
+
+    }
+
+}
+
+static void _mergeSort(_midiEvent *arr, size_t len) {
+
+    size_t lenL, lenR;
+
+    if (len <= 1) return;
+
+    lenL = len / 2;
+    lenR = len - lenL;
+
+    _mergeSort(arr, lenL);
+    _mergeSort(arr + lenL, lenR);
+
+    _merge(arr, lenL, lenR);
 
 }
 
@@ -110,30 +177,69 @@ static int _process(jack_nframes_t nframes, void *arg) {
         jack_midi_clear_buffer(outport->buf);
     }
 
-    jack_nframes_t nframes_left, frame_inc;
+    // main processing for midi output
 
-    nframes_left = nframes;
-    while(nframes_left) {
+    jack_nframes_t nframes_left, len;
+    unsigned char *midi_msg_write_ptr;
 
-        // if we're on a tick boundary, call _tick() on each sequence
-        if (sesh->frame == 0) {
-            for (int i=0; i<sesh->nseqs; i++) {
-                if (sesh->go) {
-                    _sequence_tick(sesh->seqs[i], nframes - nframes_left);
+    _midiEvent mevs[MAX_NSEQ];
+    size_t len_mevs = 0;
+    _midiEvent mev;     // _midiEvent temp variable
+    _midiEvent *mevp;   // _midiEvent* temp variable
+
+    if (sesh->go) {
+
+        // collect all mevs for this processing block
+        nframes_left = nframes;
+        while(nframes_left) {
+            len = _min_nframes(nframes_left, sesh->fps - sesh->frame);
+                for (int i=0; i<sesh->nseqs; i++) {
+
+                    if (sesh->frame == 0) _sequence_step(sesh->seqs[i]);
+                    mev = _sequence_process(sesh->seqs[i], sesh->fps,
+                                        sesh->frame, len, nframes - nframes_left);
+                    if (mev.buf) mevs[len_mevs++] = mev;    // check for NULL
+                    
                 }
-                _sequence_serve_off_buffer(sesh->seqs[i], nframes - nframes_left);
-            }
+            sesh->frame += len;
+            if (sesh->frame == sesh->fps) sesh->frame = 0;
+            nframes_left -= len;
         }
 
-        // increment to the next tick, or as far as we can now
-        frame_inc = _min_nframes(sesh->fpt - sesh->frame, nframes_left);
-        sesh->frame += frame_inc;
-        nframes_left -= frame_inc;
-        if (sesh->frame == sesh->fpt) {
-            sesh->frame = 0;
+        // sort mevs
+        _mergeSort(mevs, len_mevs);
+
+        // handle mevs
+        for (size_t i=0; i<len_mevs; i++) {
+
+            // note on
+            mevp = mevs + i;
+            midi_msg_write_ptr = jack_midi_event_reserve(mevp->buf, mevp->time, 3);
+            midi_msg_write_ptr[0] = mevp->status;
+            midi_msg_write_ptr[1] = mevp->data1;
+            midi_msg_write_ptr[2] = mevp->data2;
+
+            // queue note off
+            mevp->status -= 16;   // turn note-on into note-off on same channel
+            sesh->buf_off[(sesh->idx_off + mevp->time + mevp->length) % sesh->len_off] = *mevp;
+            // TODO replace 3000 w/ length
+
         }
 
     }
+
+    // cylce through note-off buffer
+    for (size_t i=0; i<nframes; i++) {
+        mevp = sesh->buf_off + ((sesh->idx_off + i) % sesh->len_off);
+        if (mevp->buf) {
+            midi_msg_write_ptr = jack_midi_event_reserve(mevp->buf, i, 3);
+            midi_msg_write_ptr[0] = mevp->status;
+            midi_msg_write_ptr[1] = mevp->data1;
+            midi_msg_write_ptr[2] = mevp->data2;
+            *mevp = MEV_NULL;   // clear this note-off
+        }
+    }
+    sesh->idx_off = (sesh->idx_off + nframes) % sesh->len_off;
 
     return 0;
 
@@ -141,7 +247,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 // </helper>
 
-sq_session_t *sq_session_new(const char *client_name, int tps) {
+sq_session_t *sq_session_new(const char *client_name) {
 
     sq_session_t *sesh;
 
@@ -149,11 +255,10 @@ sq_session_t *sq_session_new(const char *client_name, int tps) {
 
     // initialize struct members
     sesh->go = false;
-    sesh->tps = tps;
     sesh->nseqs = 0;
-    sesh->frame = 0;
     sesh->ninports = 0;
     sesh->noutports = 0;
+    sesh->is_playing = false;
 
     // seed random number generator with system time
     srandom(time(NULL));
@@ -169,7 +274,9 @@ sq_session_t *sq_session_new(const char *client_name, int tps) {
     sesh->sr = jack_get_sample_rate(sesh->jack_client);
     sesh->bs = jack_get_buffer_size(sesh->jack_client);
 
-    _session_set_bpm_now(sesh, DEFAULT_BPM);
+    _session_set_bpm_now(sesh, DEFAULT_BPM);    // this also sets fps
+
+    _session_reset_frame_counter(sesh);
 
     // set jack process callback
 	jack_set_process_callback(sesh->jack_client, _process, sesh);
@@ -182,13 +289,19 @@ sq_session_t *sq_session_new(const char *client_name, int tps) {
         exit(1);
     }
 
+    // allocate and initialize note-off buffer
+    sesh->len_off = sesh->fps * TRIG_MAX_LENGTH;
+    sesh->buf_off = malloc(sizeof(_midiEvent) * sesh->len_off);
+    for (size_t i=0; i<sesh->len_off; i++) {
+        sesh->buf_off[i] = MEV_NULL;
+    }
+    sesh->idx_off = 0;
+
     // activate jack client
 	if (jack_activate(sesh->jack_client)) {
 		fprintf(stderr, "failed to activate client\n");
         exit(1);
 	}
-
-    sesh->is_playing = false;
 
     return sesh;
 
@@ -335,28 +448,24 @@ void _session_set_bpm_now(sq_session_t *sesh, float bpm) {
 
     sesh->bpm = bpm;
 
-    // calculate frames per tick (fpt) (no need to cast becasue sesh->bpm is a float)
-    float fpt = (sesh->sr * SECONDS_PER_MINUTE) / (sesh->tps * sesh->bpm * STEPS_PER_BEAT);
+    // calculate frames per step (fps) (no need to cast because sesh->bpm is a float)
+    float fps = (sesh->sr * SECONDS_PER_MINUTE) / (sesh->bpm * STEPS_PER_BEAT);
 
     // and round to nearest int
-    sesh->fpt = round(fpt);
+    sesh->fps = round(fps);
 
-    // if an increase in tempo has lowered the fpt below the current frame index,
+    // if an increase in tempo has lowered the fps below the current frame index,
     //  then reset the frame index to avoid a runaway frame count
-    // (note that we could also achieve this using (sesh->frame >= sesh->fpt) in _process(),
-    //  but this method ensures that we don't skip a beat on tempo increases
-    if (sesh->frame >= sesh->fpt) {
+    // (note that we could also achieve this using (sesh->frame >= sesh->fps) in _process(),
+    //  but this method ensures that we don't skip a beat on tempo increases)
+    // HOWEVER it's worth considering: would we *rather* skip a beat?
+    if (sesh->frame >= sesh->fps) {
         sesh->frame = 0;
     }
 
 }
 
 void sq_session_add_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
-
-    if (seq->tps != sesh->tps) {
-        fprintf(stderr, "seq->tps doesn't match sesh->tps: %d vs %d\n", seq->tps, sesh->tps);
-        return;
-    }
 
     if (sesh->is_playing) {
 
@@ -441,12 +550,6 @@ char *sq_session_get_name(sq_session_t *sesh) {
 
 // read-only getters don't need to use ringbuffers
 
-int sq_session_get_tps(sq_session_t *sesh) {
-
-    return sesh->tps;
-
-}
-
 float sq_session_get_bpm(sq_session_t *sesh) {
 
     return sesh->bpm;
@@ -464,8 +567,6 @@ json_object *sq_session_get_json(sq_session_t *sesh) {
                             json_object_new_string(sq_session_get_name(sesh)));
     json_object_object_add(jo_session, "bpm",
                             json_object_new_double(sq_session_get_bpm(sesh)));
-    json_object_object_add(jo_session, "tps",
-                            json_object_new_int(sq_session_get_tps(sesh)));
 
     // sequences
     json_object *sequence_array = json_object_new_array();
@@ -545,7 +646,6 @@ sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
 
     struct json_object *jo_tmp, *jo_tmp2, *jo_tmp3, *jo_tmp4;
     const char *name;
-    int tps;
     double bpm;
     sq_session_t *sesh;
     sq_sequence_t *seq_tmp = NULL;
@@ -555,13 +655,11 @@ sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
     // first extract the top-level attributes
     json_object_object_get_ex(jo_session, "name", &jo_tmp);
     name = json_object_get_string(jo_tmp);
-    json_object_object_get_ex(jo_session, "tps", &jo_tmp);
-    tps = json_object_get_int(jo_tmp);
     json_object_object_get_ex(jo_session, "bpm", &jo_tmp);
     bpm = json_object_get_double(jo_tmp);
 
     // malloc and init the session
-    sesh = sq_session_new(name, tps);
+    sesh = sq_session_new(name);
     sq_session_set_bpm(sesh, bpm);
 
     // add the outports
