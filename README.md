@@ -5,7 +5,7 @@ an API for generative musical sequencing
 
 First, install dependencies:
 ```
-sudo apt-get install libjack-jackd2-dev libjson0-dev
+sudo apt-get install libjack-jackd2-dev libjson-c-dev
 ```
 
 Then, compile/install with:

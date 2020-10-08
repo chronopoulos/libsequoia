@@ -22,7 +22,7 @@
 #ifndef TRIGGER_H
 #define TRIGGER_H
 
-#include <json/json.h>
+#include <json-c/json.h>
 
 #define TRIG_MAX_LENGTH 16.0
 

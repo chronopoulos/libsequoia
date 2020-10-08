@@ -25,7 +25,7 @@
 #include <stdbool.h>
 #include <jack/jack.h>
 #include <jack/midiport.h>
-#include <json/json.h> 
+#include <json-c/json.h> 
 #include "sequence.h"
 #include "outport.h"
 #include "inport.h"

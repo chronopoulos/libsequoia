@@ -25,7 +25,7 @@
 #include <pthread.h>
 #include <jack/midiport.h>
 #include <jack/ringbuffer.h>
-#include <json/json.h>
+#include <json-c/json.h>
 
 #include "trigger.h"
 #include "outport.h"
