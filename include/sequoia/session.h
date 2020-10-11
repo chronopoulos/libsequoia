@@ -29,6 +29,7 @@
 #include "sequence.h"
 #include "outport.h"
 #include "inport.h"
+#include "offHeap.h"
 
 // (config parameters)
 #define MAX_NSEQ 256
@@ -83,9 +84,10 @@ typedef struct {
     int ninports, noutports;
 
     // note-off buffer
-    _midiEvent *buf_off;
+    offNode_t **buf_off;    // array of pointers
     size_t len_off;
     size_t idx_off;
+    offHeap_t *offHeap;
 
 } sq_session_t;
 

@@ -158,6 +158,7 @@ static void _mergeSort(_midiEvent *arr, size_t len) {
 static int _process(jack_nframes_t nframes, void *arg) {
 
     sq_session_t *sesh = (sq_session_t*) arg;
+    offNode_t *offp, **offpp;   // tmp vars
 
     _session_serve_ctrl_msgs(sesh);
 
@@ -220,24 +221,31 @@ static int _process(jack_nframes_t nframes, void *arg) {
             midi_msg_write_ptr[2] = mevp->data2;
 
             // queue note off
-            mevp->status -= 16;   // turn note-on into note-off on same channel
-            sesh->buf_off[(sesh->idx_off + mevp->time + mevp->length) % sesh->len_off] = *mevp;
-            // TODO replace 3000 w/ length
-
+            offp = offHeap_alloc(sesh->offHeap);
+            offp->buf = mevp->buf;
+            offp->note = mevp->data1;   // TODO channel
+            offp->next = NULL;
+            offpp = sesh->buf_off + ((sesh->idx_off + mevp->time + mevp->length) % sesh->len_off);
+            while (*offpp) {   // follow the linked list until next == NULL
+                offpp = &((*offpp)->next);
+            }
+            (*offpp) = offp;
         }
 
     }
 
-    // cylce through note-off buffer
+    // cycle through note-off buffer
     for (size_t i=0; i<nframes; i++) {
-        mevp = sesh->buf_off + ((sesh->idx_off + i) % sesh->len_off);
-        if (mevp->buf) {
-            midi_msg_write_ptr = jack_midi_event_reserve(mevp->buf, i, 3);
-            midi_msg_write_ptr[0] = mevp->status;
-            midi_msg_write_ptr[1] = mevp->data1;
-            midi_msg_write_ptr[2] = mevp->data2;
-            *mevp = MEV_NULL;   // clear this note-off
+        offp = sesh->buf_off[(sesh->idx_off + i) % sesh->len_off];
+        while (offp) {
+            midi_msg_write_ptr = jack_midi_event_reserve(offp->buf, i, 3);
+            midi_msg_write_ptr[0] = 128;
+            midi_msg_write_ptr[1] = offp->note;
+            midi_msg_write_ptr[2] = 0;
+            offHeap_free(sesh->offHeap, offp); // TODO
+            offp = offp->next;
         }
+        sesh->buf_off[(sesh->idx_off + i) % sesh->len_off] = NULL;  // could do with an offpp?
     }
     sesh->idx_off = (sesh->idx_off + nframes) % sesh->len_off;
 
@@ -289,13 +297,14 @@ sq_session_t *sq_session_new(const char *client_name) {
         exit(1);
     }
 
-    // allocate and initialize note-off buffer
+    // allocate and initialize note-off buffer, plus offHeap
     sesh->len_off = sesh->fps * TRIG_MAX_LENGTH;
-    sesh->buf_off = malloc(sizeof(_midiEvent) * sesh->len_off);
+    sesh->buf_off = malloc(sizeof(offNode_t*) * sesh->len_off);
     for (size_t i=0; i<sesh->len_off; i++) {
-        sesh->buf_off[i] = MEV_NULL;
+        sesh->buf_off[i] = NULL;
     }
     sesh->idx_off = 0;
+    sesh->offHeap = offHeap_new(MAX_NSEQ * MAX_SEQ_NSTEPS);
 
     // activate jack client
 	if (jack_activate(sesh->jack_client)) {
@@ -713,6 +722,8 @@ void sq_session_delete(sq_session_t *sesh) {
 
     // frees the sq_session_t struct (but not its sequences, ports, etc)
 
+    offHeap_delete(sesh->offHeap);
+    free(sesh->buf_off);
     free(sesh);
 
 }
