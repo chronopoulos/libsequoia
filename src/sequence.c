@@ -26,6 +26,7 @@
 #include <math.h>
 
 #include "sequoia.h"
+#include "sequoia/midiEvent.h"
 
 // <helper>
 
@@ -158,16 +159,16 @@ void _sequence_reset_now(sq_sequence_t *seq) {
 
 }
 
-_midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
+midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
                         jack_nframes_t start, jack_nframes_t len, jack_nframes_t buf_offset) {
 
     sq_trigger_t *trig;
     jack_nframes_t frame_trig;
-    _midiEvent mev; // tmp value
+    midiEvent mev; // tmp value
 
     if (start + len > fps) {   // this should never happen
         fprintf(stderr, "_sequence_process() crossed step boundary: %s\n", seq->name);
-        return MEV_NULL;
+        return MIDIEVENT_NULL;
     }
 
     // serve any control messages in the ringbuffer
@@ -201,7 +202,7 @@ _midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
         }
     }
 
-    return MEV_NULL;
+    return MIDIEVENT_NULL;
 
 }
 

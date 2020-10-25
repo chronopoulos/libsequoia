@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "sequoia.h"
+#include "sequoia/midiEvent.h"
 
 // <helper>
 
@@ -95,66 +96,6 @@ void _session_serve_ctrl_msgs(sq_session_t *sesh) {
 
 }
 
-static void _merge(_midiEvent *arr, size_t lenL, size_t lenR) {
-
-    // L goes from arr[0,lenL)
-    // R goes from arr[lenL,lenL+lenR)
-
-    size_t i, iL, iR;
-    _midiEvent L[lenL], R[lenR];
-    _midiEvent tvL, tvR;   // temp values
-
-    // copy into local temp arrays
-    for (i=0; i<lenL; i++) {
-        L[i] = arr[i];
-    }
-    for (i=0; i<lenR; i++) {
-        R[i] = arr[lenL + i];
-    }
-
-    // fill the original array with ordered data from the temp arrays
-    iL=0;
-    iR=0;
-    for (i=0; i<(lenL+lenR); i++) {
-
-        if (iL >= lenL) {
-            arr[i] = R[iR];
-            iR++;
-        } else if (iR >= lenR) {
-            arr[i] = L[iL];
-            iL++;
-        } else {
-            tvL = L[iL];
-            tvR = R[iR];
-            if (tvL.time <= tvR.time) {
-                arr[i] = tvL;
-                iL++;
-            } else {
-                arr[i] = tvR;
-                iR++;
-            }
-        }
-
-    }
-
-}
-
-static void _mergeSort(_midiEvent *arr, size_t len) {
-
-    size_t lenL, lenR;
-
-    if (len <= 1) return;
-
-    lenL = len / 2;
-    lenR = len - lenL;
-
-    _mergeSort(arr, lenL);
-    _mergeSort(arr + lenL, lenR);
-
-    _merge(arr, lenL, lenR);
-
-}
-
 static int _process(jack_nframes_t nframes, void *arg) {
 
     sq_session_t *sesh = (sq_session_t*) arg;
@@ -183,10 +124,10 @@ static int _process(jack_nframes_t nframes, void *arg) {
     jack_nframes_t nframes_left, len;
     unsigned char *midi_msg_write_ptr;
 
-    _midiEvent mevs[MAX_NSEQ];
+    midiEvent mevs[MAX_NSEQ];
     size_t len_mevs = 0;
-    _midiEvent mev;     // _midiEvent temp variable
-    _midiEvent *mevp;   // _midiEvent* temp variable
+    midiEvent mev;     // midiEvent temp variable
+    midiEvent *mevp;   // midiEvent* temp variable
 
     if (sesh->go) {
 
@@ -208,7 +149,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
         }
 
         // sort mevs
-        _mergeSort(mevs, len_mevs);
+        midiEvent_sort(mevs, len_mevs);
 
         // handle mevs
         for (size_t i=0; i<len_mevs; i++) {
