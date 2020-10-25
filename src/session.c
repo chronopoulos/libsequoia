@@ -222,13 +222,12 @@ static int _process(jack_nframes_t nframes, void *arg) {
             // queue note off
             mevp->status -= 16;   // turn note-on into note-off on same channel
             sesh->buf_off[(sesh->idx_off + mevp->time + mevp->length) % sesh->len_off] = *mevp;
-            // TODO replace 3000 w/ length
 
         }
 
     }
 
-    // cylce through note-off buffer
+    // cycle through note-off buffer
     for (size_t i=0; i<nframes; i++) {
         mevp = sesh->buf_off + ((sesh->idx_off + i) % sesh->len_off);
         if (mevp->buf) {
