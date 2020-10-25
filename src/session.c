@@ -131,7 +131,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
     if (sesh->go) {
 
-        // collect all mevs for this processing block
+        // collect mevs (note-on and CC) for this processing block
         nframes_left = nframes;
         while(nframes_left) {
             len = _min_nframes(nframes_left, sesh->fps - sesh->frame);
@@ -141,6 +141,21 @@ static int _process(jack_nframes_t nframes, void *arg) {
                     mev = _sequence_process(sesh->seqs[i], sesh->fps,
                                         sesh->frame, len, nframes - nframes_left);
                     if (mev.buf) mevs[len_mevs++] = mev;    // check for NULL
+                    if (mev.type == MEV_TYPE_NOTEON) {      // queue note off
+                        // allocate and set offNode
+                        offp = offHeap_alloc(sesh->offHeap);
+                        offp->mev.type = MEV_TYPE_NOTEOFF;
+                        offp->mev.buf = mev.buf;
+                        offp->mev.status = mev.status - 16; // convert on to off
+                        offp->mev.data1 = mev.data1;
+                        offp->next = NULL;
+                        // add it to the linked-list array that is buf_off
+                        offpp = sesh->buf_off + ((sesh->idx_off + mev.time + mev.length) % sesh->len_off);
+                        while (*offpp) {   // follow the linked list until next == NULL
+                            offpp = &((*offpp)->next);
+                        }
+                        (*offpp) = offp;
+                    }
                     
                 }
             sesh->frame += len;
@@ -148,48 +163,32 @@ static int _process(jack_nframes_t nframes, void *arg) {
             nframes_left -= len;
         }
 
-        // sort mevs
-        midiEvent_sort(mevs, len_mevs);
-
-        // handle mevs
-        for (size_t i=0; i<len_mevs; i++) {
-
-            // note on
-            mevp = mevs + i;
-            midi_msg_write_ptr = jack_midi_event_reserve(mevp->buf, mevp->time, 3);
-            midi_msg_write_ptr[0] = mevp->status;
-            midi_msg_write_ptr[1] = mevp->data1;
-            midi_msg_write_ptr[2] = mevp->data2;
-
-            // queue note off
-            offp = offHeap_alloc(sesh->offHeap);
-            offp->buf = mevp->buf;
-            offp->note = mevp->data1;   // TODO channel
-            offp->next = NULL;
-            offpp = sesh->buf_off + ((sesh->idx_off + mevp->time + mevp->length) % sesh->len_off);
-            while (*offpp) {   // follow the linked list until next == NULL
-                offpp = &((*offpp)->next);
-            }
-            (*offpp) = offp;
-
-        }
-
     }
 
-    // cycle through note-off buffer
+    // cycle through note-off buffer, collect them as mevs
     for (size_t i=0; i<nframes; i++) {
         offp = sesh->buf_off[(sesh->idx_off + i) % sesh->len_off];
         while (offp) {
-            midi_msg_write_ptr = jack_midi_event_reserve(offp->buf, i, 3);
-            midi_msg_write_ptr[0] = 128;
-            midi_msg_write_ptr[1] = offp->note;
-            midi_msg_write_ptr[2] = 0;
-            offHeap_free(sesh->offHeap, offp); // TODO
+            mevs[len_mevs] = offp->mev;
+            mevs[len_mevs++].time = i;
+            offHeap_free(sesh->offHeap, offp);
             offp = offp->next;
         }
         sesh->buf_off[(sesh->idx_off + i) % sesh->len_off] = NULL;  // could do with an offpp?
     }
     sesh->idx_off = (sesh->idx_off + nframes) % sesh->len_off;
+
+    // sort all mevs
+    midiEvent_sort(mevs, len_mevs);
+
+    // fire off mevs
+    for (size_t i=0; i<len_mevs; i++) {
+        mevp = mevs + i;
+        midi_msg_write_ptr = jack_midi_event_reserve(mevp->buf, mevp->time, 3);
+        midi_msg_write_ptr[0] = mevp->status;
+        midi_msg_write_ptr[1] = mevp->data1;
+        midi_msg_write_ptr[2] = mevp->data2;
+    }
 
     return 0;
 

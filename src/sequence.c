@@ -185,11 +185,13 @@ midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
                     mev.buf = seq->outport->buf;
                     mev.time = frame_trig - start;
                     if (trig->type == TRIG_NOTE) {
+                        mev.type = MEV_TYPE_NOTEON;
                         mev.status = 143 + trig->channel;   // note on
-                        mev.length = trig->length * fps;
                         mev.data1 = trig->note + seq->transpose;
                         mev.data2 = trig->velocity;
+                        mev.length = trig->length * fps;
                     } else if (trig->type == TRIG_CC) {
+                        mev.type = MEV_TYPE_CC;
                         mev.status = 175 + trig->channel;   // control change
                         mev.data1 = trig->cc_number;
                         mev.data2 = trig->cc_value;

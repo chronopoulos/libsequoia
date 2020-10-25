@@ -1,7 +1,6 @@
 // usage:
-//  offNode_t *offNode = offHeap_add(offHeap, buf, note)
-//  offNode->buf = buf;
-//  offNode->note = note;
+//  offNode_t *offNode = offHeap_alloc(offHeap)
+//  offNode->mev = mev;
 //  offNode->next = NULL;
 //  prevNode->next = offNode;
 
@@ -68,7 +67,7 @@ void offHeap_free(offHeap_t *offHeap, offNode_t *offNode) {
         return;
     }
 
-    // write the note pointer to the avail queue
+    // write the node pointer to the avail queue
     offHeap->avail[offHeap->wavail] = offNode;
 
     // handle queue state

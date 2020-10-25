@@ -1,9 +1,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "sequoia/midiEvent.h"
+
 typedef struct offNode {
-    void *buf;
-    uint8_t note;
+    midiEvent mev;
     struct offNode *next;
 } offNode_t;
 
