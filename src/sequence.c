@@ -79,6 +79,11 @@ sq_sequence_t *sq_sequence_new(int nsteps) {
 
     sq_sequence_t *seq;
 
+    if (nsteps > MAX_SEQ_NSTEPS) {
+        fprintf(stderr, "nsteps of %d exceeds max of %d\n", nsteps, MAX_SEQ_NSTEPS);
+        exit(1);
+    }
+
     seq = malloc(sizeof(sq_sequence_t));
 
     seq->nsteps = nsteps;

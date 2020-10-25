@@ -31,6 +31,7 @@
 #include "outport.h"
 
 #define MAX_SEQ_NAME_LEN 255
+#define MAX_SEQ_NSTEPS 256
 #define MEV_NULL (_midiEvent) {NULL, 0, 0, 0, 0, 0}
 
 
