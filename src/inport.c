@@ -24,22 +24,12 @@
 
 #include "sequoia.h"
 
-unsigned int _mod(int a, unsigned int n) {
+// LOCAL DECLARATIONS
 
-    return (a % n + n) % n;
+unsigned int smod(int, unsigned int);
+void inport_sanitize_name(sq_inport_t*, const char*);
 
-}
-
-void _inport_sanitize_name(sq_inport_t *inport, const char *name) {
-
-    if (strlen(name) <= INPORT_MAX_NAME_LEN) {
-        strcpy(inport->name, name);
-    } else {
-        strncpy(inport->name, name, SEQUENCE_MAX_NAME_LEN);
-        inport->name[INPORT_MAX_NAME_LEN] = '\0';
-    }
-
-}
+// INTERFACE CODE
 
 sq_inport_t *sq_inport_new(const char *name) {
 
@@ -49,7 +39,7 @@ sq_inport_t *sq_inport_new(const char *name) {
 
     inport->type = INPORT_NONE;
 
-    _inport_sanitize_name(inport, name);
+    inport_sanitize_name(inport, name);
 
     inport->jack_client = NULL;
     inport->jack_port = NULL;
@@ -61,13 +51,19 @@ sq_inport_t *sq_inport_new(const char *name) {
 
 }
 
+void sq_inport_delete(sq_inport_t *inport) {
+
+    free(inport);
+
+}
+
 void sq_inport_set_name(sq_inport_t *inport, const char *name) {
 
     if (inport->jack_client) { // if registered
         jack_port_rename(inport->jack_client, inport->jack_port, name);
     }
 
-    _inport_sanitize_name(inport, name); 
+    inport_sanitize_name(inport, name); 
 
 }
 
@@ -88,7 +84,9 @@ void sq_inport_add_sequence(sq_inport_t *inport, sq_sequence_t *seq) {
 
 }
 
-void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
+// PUBLIC CODE
+
+void inport_process(sq_inport_t *inport, jack_nframes_t nframes) {
 
     int iarg;
     bool barg;
@@ -116,7 +114,7 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
                 case INPORT_PLAYHEAD:
                     // distance from 60 is taken modulo the sequence length
                     for (int i=0; i<inport->nseqs; i++) {
-                        iarg = _mod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
+                        iarg = smod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
                         sequence_set_playhead_now(inport->seqs[i], iarg);
                     }
                     break;
@@ -140,14 +138,14 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
                 case INPORT_FIRST:
                     // distance from 60 is taken modulo the sequence length
                     for (int i=0; i<inport->nseqs; i++) {
-                        iarg = _mod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
+                        iarg = smod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
                         sequence_set_first_now(inport->seqs[i], iarg);
                     }
                     break;
                 case INPORT_LAST:
                     // distance from 60 is taken modulo the sequence length
                     for (int i=0; i<inport->nseqs; i++) {
-                        iarg = _mod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
+                        iarg = smod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
                         sequence_set_last_now(inport->seqs[i], iarg);
                     }
                     break;
@@ -164,7 +162,7 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
 
 }
 
-json_object *sq_inport_get_json(sq_inport_t *inport) {
+json_object *inport_get_json(sq_inport_t *inport) {
 
     json_object *jo_inport = json_object_new_object();
 
@@ -184,7 +182,7 @@ json_object *sq_inport_get_json(sq_inport_t *inport) {
 
 }
 
-sq_inport_t *sq_inport_malloc_from_json(json_object *jo_inport) {
+sq_inport_t *inport_malloc_from_json(json_object *jo_inport) {
 
     sq_inport_t *inport;
     const char *name;
@@ -205,9 +203,24 @@ sq_inport_t *sq_inport_malloc_from_json(json_object *jo_inport) {
 
 }
 
-void sq_inport_delete(sq_inport_t *inport) {
+// LOCAL CODE
 
-    free(inport);
+unsigned int smod(int a, unsigned int n) {
+
+    // signed modulo
+
+    return (a % n + n) % n;
+
+}
+
+void inport_sanitize_name(sq_inport_t *inport, const char *name) {
+
+    if (strlen(name) <= INPORT_MAX_NAME_LEN) {
+        strcpy(inport->name, name);
+    } else {
+        strncpy(inport->name, name, SEQUENCE_MAX_NAME_LEN);
+        inport->name[INPORT_MAX_NAME_LEN] = '\0';
+    }
 
 }
 

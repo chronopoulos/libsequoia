@@ -23,16 +23,11 @@
 
 #include "sequoia.h"
 
-void _outport_sanitize_name(sq_outport_t *outport, const char *name) {
+// LOCAL DECLARATIONS
 
-    if (strlen(name) <= OUTPORT_MAX_NAME_LEN) {
-        strcpy(outport->name, name);
-    } else {
-        strncpy(outport->name, name, OUTPORT_MAX_NAME_LEN);
-        outport->name[OUTPORT_MAX_NAME_LEN] = '\0';
-    }
+void outport_sanitize_name(sq_outport_t*, const char*);
 
-}
+// INTERFACE CODE
 
 sq_outport_t *sq_outport_new(const char *name) {
 
@@ -40,7 +35,7 @@ sq_outport_t *sq_outport_new(const char *name) {
 
     outport = malloc(sizeof(sq_outport_t));
 
-    _outport_sanitize_name(outport, name);
+    outport_sanitize_name(outport, name);
 
     outport->jack_client = NULL;
     outport->jack_port = NULL;
@@ -50,13 +45,19 @@ sq_outport_t *sq_outport_new(const char *name) {
 
 }
 
+void sq_outport_delete(sq_outport_t *outport) {
+
+    free(outport);
+
+}
+
 void sq_outport_set_name(sq_outport_t *outport, const char *name) {
 
     if (outport->jack_client) { // if registered
         jack_port_rename(outport->jack_client, outport->jack_port, name);
     }
 
-    _outport_sanitize_name(outport, name); 
+    outport_sanitize_name(outport, name); 
 
 }
 
@@ -66,7 +67,9 @@ char *sq_outport_get_name(sq_outport_t *outport) {
 
 }
 
-json_object *sq_outport_get_json(sq_outport_t *outport) {
+// PUBLIC CODE
+
+json_object *outport_get_json(sq_outport_t *outport) {
 
     json_object *jo_outport = json_object_new_object();
 
@@ -77,7 +80,7 @@ json_object *sq_outport_get_json(sq_outport_t *outport) {
 
 }
 
-sq_outport_t *sq_outport_malloc_from_json(json_object *jo_outport) {
+sq_outport_t *outport_malloc_from_json(json_object *jo_outport) {
 
     sq_outport_t *outport;
     const char *name;
@@ -92,9 +95,16 @@ sq_outport_t *sq_outport_malloc_from_json(json_object *jo_outport) {
 
 }
 
-void sq_outport_delete(sq_outport_t *outport) {
+// LOCAL CODE
 
-    free(outport);
+void outport_sanitize_name(sq_outport_t *outport, const char *name) {
+
+    if (strlen(name) <= OUTPORT_MAX_NAME_LEN) {
+        strcpy(outport->name, name);
+    } else {
+        strncpy(outport->name, name, OUTPORT_MAX_NAME_LEN);
+        outport->name[OUTPORT_MAX_NAME_LEN] = '\0';
+    }
 
 }
 

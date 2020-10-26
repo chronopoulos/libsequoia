@@ -575,7 +575,7 @@ json_object *sequence_get_json(sq_sequence_t *seq) {
 
     json_object *trigger_array = json_object_new_array();
     for (int i=0; i<seq->nsteps; i++) {
-        json_object_array_add(trigger_array, sq_trigger_get_json(seq->trigs + i));
+        json_object_array_add(trigger_array, trigger_get_json(seq->trigs + i));
     }
     json_object_object_add(jo_sequence, "triggers", trigger_array);
 
@@ -637,7 +637,7 @@ sq_sequence_t *sequence_malloc_from_json(json_object *jo_seq) {
     for (int i=0; i<nsteps; i++) {
         jo_trig = json_object_array_get_idx(jo_tmp, i);
         // trigs get copied into seqs, so we don't need to malloc them
-        sq_trigger_from_json(jo_trig, &trig);
+        trigger_from_json(jo_trig, &trig);
         sq_sequence_set_trig(seq, i, &trig);
     }
 

@@ -24,6 +24,8 @@
 
 #include <json-c/json.h>
 
+// INTERFACE
+
 #define TRIG_MAX_LENGTH 16.0
 
 enum trig_type {TRIG_NULL, TRIG_NOTE, TRIG_CC};
@@ -53,7 +55,10 @@ void sq_trigger_set_probability(sq_trigger_t*, float);
 void sq_trigger_set_microtime(sq_trigger_t*, float);
 void sq_trigger_set_channel(sq_trigger_t*, int);
 
-json_object *sq_trigger_get_json(sq_trigger_t*);
-void sq_trigger_from_json(json_object*, sq_trigger_t*);
+// PUBLIC
+
+json_object *trigger_get_json(sq_trigger_t*);
+void trigger_from_json(json_object*, sq_trigger_t*);
+
 
 #endif

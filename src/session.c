@@ -473,7 +473,7 @@ static int session_process(jack_nframes_t nframes, void *arg) {
 
     // serve the inports
     for (int i=0; i<sesh->ninports; i++) {
-        _inport_serve(sesh->inports[i], nframes);
+        inport_process(sesh->inports[i], nframes);
     }
 
     // prepare the outports. need to do this once per port, per processing
@@ -638,14 +638,14 @@ static json_object *sq_session_get_json(sq_session_t *sesh) {
     // inports
     json_object *inport_array = json_object_new_array();
     for (int i=0; i<sesh->ninports; i++) {
-        json_object_array_add(inport_array, sq_inport_get_json(sesh->inports[i]));
+        json_object_array_add(inport_array, inport_get_json(sesh->inports[i]));
     }
     json_object_object_add(jo_session, "inports", inport_array);
     
     // outports
     json_object *outport_array = json_object_new_array();
     for (int i=0; i<sesh->noutports; i++) {
-        json_object_array_add(outport_array, sq_outport_get_json(sesh->outports[i]));
+        json_object_array_add(outport_array, outport_get_json(sesh->outports[i]));
     }
     json_object_object_add(jo_session, "outports", outport_array);
     
@@ -677,7 +677,7 @@ static sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
     json_object_object_get_ex(jo_session, "outports", &jo_tmp);
     for (int i=0; i<json_object_array_length(jo_tmp); i++) {
         jo_tmp2 = json_object_array_get_idx(jo_tmp, i);
-        outport_tmp = sq_outport_malloc_from_json(jo_tmp2);
+        outport_tmp = outport_malloc_from_json(jo_tmp2);
         sq_session_register_outport(sesh, outport_tmp);
     }
 
@@ -702,7 +702,7 @@ static sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
     json_object_object_get_ex(jo_session, "inports", &jo_tmp);
     for (int i=0; i<json_object_array_length(jo_tmp); i++) {
         jo_tmp2 = json_object_array_get_idx(jo_tmp, i);
-        inport_tmp = sq_inport_malloc_from_json(jo_tmp2);
+        inport_tmp = inport_malloc_from_json(jo_tmp2);
         // seqs remains null, resolve them now
         json_object_object_get_ex(jo_tmp2, "sequences", &jo_tmp3);
         for (int j=0; j<json_object_array_length(jo_tmp3); j++) {

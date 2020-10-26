@@ -26,6 +26,8 @@
 
 #include "sequence.h"
 
+// INTERFACE
+
 #define INPORT_MAX_NAME_LEN 255
 #define INPORT_MAX_NSEQ 16
 
@@ -48,15 +50,16 @@ typedef struct {
 } sq_inport_t;
 
 sq_inport_t *sq_inport_new(const char*);
+void sq_inport_delete(sq_inport_t*);
 void sq_inport_set_name(sq_inport_t*, const char*);
 void sq_inport_set_type(sq_inport_t*, enum inport_type);
 void sq_inport_add_sequence(sq_inport_t*, sq_sequence_t*);
 
-void _inport_serve(sq_inport_t*, jack_nframes_t);
+// PUBLIC
 
-json_object *sq_inport_get_json(sq_inport_t*);
-sq_inport_t *sq_inport_malloc_from_json(json_object*);
+void inport_process(sq_inport_t*, jack_nframes_t);
+json_object *inport_get_json(sq_inport_t*);
+sq_inport_t *inport_malloc_from_json(json_object*);
 
-void sq_inport_delete(sq_inport_t*);
 
 #endif

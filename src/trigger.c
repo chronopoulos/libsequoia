@@ -21,6 +21,8 @@
 
 #include "sequoia.h"
 
+// INTERFACE CODE
+
 void sq_trigger_init(sq_trigger_t *trig) {
 
     trig->type = TRIG_NULL;
@@ -104,7 +106,9 @@ void sq_trigger_set_channel(sq_trigger_t *trig, int channel) {
 
 }
 
-json_object *sq_trigger_get_json(sq_trigger_t *trig) {
+// PUBLIC CODE
+
+json_object *trigger_get_json(sq_trigger_t *trig) {
 
     json_object *jo_trigger = json_object_new_object();
 
@@ -139,7 +143,7 @@ json_object *sq_trigger_get_json(sq_trigger_t *trig) {
 
 }
 
-void sq_trigger_from_json(json_object *jo_trig, sq_trigger_t *trig) {
+void trigger_from_json(json_object *jo_trig, sq_trigger_t *trig) {
 
     struct json_object *jo_tmp;
     int type, channel, note, velocity, cc_number, cc_value;
