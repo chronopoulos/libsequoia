@@ -26,39 +26,407 @@
 #include "sequoia.h"
 #include "sequoia/midiEvent.h"
 
-// <helper>
+// LOCAL DECLARATIONS
 
-inline jack_nframes_t _min_nframes(jack_nframes_t a, jack_nframes_t b ) {
+#define STEPS_PER_BEAT 4
+#define SECONDS_PER_MINUTE 60
+#define DEFAULT_BPM 120.00 
+#define RINGBUFFER_LENGTH 16
+
+enum session_param {SESSION_GO, SESSION_BPM, SESSION_ADD_SEQ, SESSION_RM_SEQ};
+
+typedef struct {
+
+    enum session_param param;
+
+    // parameter-dependent value fields
+    int vi;
+    float vf;
+    bool vb;
+    sq_sequence_t *vp;
+
+} session_ctrl_msg_t ;
+
+static void session_set_bpm_now(sq_session_t*, float);
+static void session_add_sequence_now(sq_session_t*, sq_sequence_t*);
+static void session_rm_sequence_now(sq_session_t*, sq_sequence_t*);
+static inline jack_nframes_t min_nframes(jack_nframes_t, jack_nframes_t);
+static void session_ringbuffer_write(sq_session_t*, session_ctrl_msg_t*);
+static void session_reset_frame_counter(sq_session_t *);
+static void session_serve_ctrl_msgs(sq_session_t*);
+static int session_process(jack_nframes_t, void*);
+static void session_disconnect_jack(sq_session_t*);
+static void session_set_bpm_now(sq_session_t*, float);
+static void session_add_sequence_now(sq_session_t*, sq_sequence_t*);
+static void session_rm_sequence_now(sq_session_t*, sq_sequence_t*);
+static json_object *sq_session_get_json(sq_session_t*);
+static sq_session_t *sq_session_malloc_from_json(json_object*);
+static void session_delete(sq_session_t*);
+
+// INTERFACE CODE
+
+sq_session_t *sq_session_new(const char *client_name) {
+
+    sq_session_t *sesh;
+
+    sesh = malloc(sizeof(sq_session_t));
+
+    // initialize struct members
+    sesh->go = false;
+    sesh->nseqs = 0;
+    sesh->ninports = 0;
+    sesh->noutports = 0;
+    sesh->is_playing = false;
+
+    // seed random number generator with system time
+    srandom(time(NULL));
+
+    // open jack client
+    sesh->jack_client = jack_client_open(client_name, JackNoStartServer, NULL);
+	if (sesh->jack_client == NULL) {
+        fprintf(stderr, "sequoia failed to open JACK client\n");
+        exit(1);
+	}
+
+    // get jack server parameters
+    sesh->sr = jack_get_sample_rate(sesh->jack_client);
+    sesh->bs = jack_get_buffer_size(sesh->jack_client);
+
+    session_set_bpm_now(sesh, DEFAULT_BPM);    // this also sets fps
+
+    session_reset_frame_counter(sesh);
+
+    // set jack process callback
+	jack_set_process_callback(sesh->jack_client, session_process, sesh);
+
+    // allocate and lock ringbuffer
+    sesh->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(session_ctrl_msg_t));
+    int err = jack_ringbuffer_mlock(sesh->rb);
+    if (err) {
+        fprintf(stderr, "failed to lock ringbuffer\n");
+        exit(1);
+    }
+
+    // allocate and initialize note-off buffer, plus offHeap
+    sesh->len_off = sesh->fps * TRIG_MAX_LENGTH;
+    sesh->buf_off = malloc(sizeof(offNode_t*) * sesh->len_off);
+    for (size_t i=0; i<sesh->len_off; i++) {
+        sesh->buf_off[i] = NULL;
+    }
+    sesh->idx_off = 0;
+    sesh->offHeap = offHeap_new(SESSION_MAX_NSEQ * MAX_SEQ_NSTEPS);
+
+    // activate jack client
+	if (jack_activate(sesh->jack_client)) {
+		fprintf(stderr, "failed to activate client\n");
+        exit(1);
+	}
+
+    return sesh;
+
+}
+
+int sq_session_register_outport(sq_session_t *sesh, sq_outport_t *outport) {
+
+    jack_port_t *jack_port;
+
+    if (sesh->noutports == SESSION_MAX_NOUTPORTS) {
+        fprintf(stderr, "max number of outports reached: %d\n", SESSION_MAX_NOUTPORTS);
+        return -1;
+    }
+
+    jack_port = jack_port_register(sesh->jack_client, outport->name,
+                                    JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+
+    if (!jack_port) {
+        fprintf(stderr, "failed to create JACK port\n");
+        return -1;
+    }
+
+    outport->jack_client = sesh->jack_client;
+    outport->jack_port = jack_port;
+
+    sesh->outports[sesh->noutports] = outport;
+    sesh->noutports++;
+
+    return 0;
+
+}
+
+sq_outport_t *sq_session_get_outport_from_name(sq_session_t *sesh, const char *name) {
+
+    for (int i=0; i<sesh->noutports; i++) {
+        if (strcmp(sesh->outports[i]->name, name) == 0) {
+            return sesh->outports[i];
+        }
+    }
+
+    return NULL;
+
+}
+
+int sq_session_register_inport(sq_session_t *sesh, sq_inport_t *inport) {
+
+    jack_port_t *jack_port;
+
+    if (sesh->ninports == SESSION_MAX_NINPORTS) {
+        fprintf(stderr, "max number of inports reached: %d\n", SESSION_MAX_NINPORTS);
+        return -1;
+    }
+
+    jack_port = jack_port_register(sesh->jack_client, inport->name,
+                                    JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+
+    if (!jack_port) {
+        fprintf(stderr, "failed to create JACK port\n");
+        return -1;
+    }
+
+    inport->jack_client = sesh->jack_client;
+    inport->jack_port = jack_port;
+
+    sesh->inports[sesh->ninports] = inport;
+    sesh->ninports++;
+
+    return 0;
+
+}
+
+sq_inport_t *sq_session_get_inport_from_name(sq_session_t *sesh, const char *name) {
+
+    for (int i=0; i<sesh->ninports; i++) {
+        if (strcmp(sesh->inports[i]->name, name) == 0) {
+            return sesh->inports[i];
+        }
+    }
+
+    return NULL;
+
+}
+
+void sq_session_start(sq_session_t *sesh) {
+
+    if (!sesh->is_playing) {
+
+        session_ctrl_msg_t msg;
+        msg.param = SESSION_GO;
+        msg.vb = true;
+
+        session_ringbuffer_write(sesh, &msg);
+
+        sesh->is_playing = true;
+
+    }
+
+}
+
+void sq_session_stop(sq_session_t *sesh) {
+
+    if (sesh->is_playing) {
+
+        session_ctrl_msg_t msg;
+        msg.param = SESSION_GO;
+        msg.vb = false;
+
+        session_ringbuffer_write(sesh, &msg);
+
+        sesh->is_playing = false;
+
+    }
+
+}
+
+void sq_session_set_bpm(sq_session_t *sesh, float bpm) {
+
+    if (sesh->is_playing) {
+
+        session_ctrl_msg_t msg;
+        msg.param = SESSION_BPM;
+        msg.vf = bpm;
+
+        session_ringbuffer_write(sesh, &msg);
+
+    } else {
+
+        session_set_bpm_now(sesh, bpm);
+
+    }
+
+}
+
+void sq_session_add_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
+
+    if (sesh->is_playing) {
+
+        session_ctrl_msg_t msg;
+        msg.param = SESSION_ADD_SEQ;
+        msg.vp = seq;
+
+        session_ringbuffer_write(sesh, &msg);
+
+    } else {
+
+        session_add_sequence_now(sesh, seq);
+
+    }
+
+}
+
+void sq_session_rm_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
+
+    // NOTE: this does not free the memory pointed to by seq;
+    //  the caller must do that explicitly
+
+    if (sesh->is_playing) {
+
+        session_ctrl_msg_t msg;
+        msg.param = SESSION_RM_SEQ;
+        msg.vp = seq;
+
+        session_ringbuffer_write(sesh, &msg);
+
+    } else {
+
+        session_rm_sequence_now(sesh, seq);
+
+    }
+
+}
+
+// read-only getters don't need to use ringbuffers
+
+sq_sequence_t *sq_session_get_sequence_from_name(sq_session_t *sesh, const char *name) {
+
+    for (int i=0; i<sesh->nseqs; i++) {
+        if (strcmp(sesh->seqs[i]->name, name) == 0) {
+            return sesh->seqs[i];
+        }
+    }
+
+    return NULL;
+
+}
+
+char *sq_session_get_name(sq_session_t *sesh) {
+
+    return jack_get_client_name(sesh->jack_client);
+
+}
+
+float sq_session_get_bpm(sq_session_t *sesh) {
+
+    return sesh->bpm;
+
+}
+
+void sq_session_save(sq_session_t *sesh, const char *filename) {
+
+    FILE *fp;
+
+    fp = fopen(filename, "w+");
+    fprintf(fp, "%s", json_object_to_json_string_ext(sq_session_get_json(sesh),
+                                                    JSON_C_TO_STRING_PRETTY));
+    fclose(fp);
+
+}
+
+sq_session_t *sq_session_load(const char *filename) {
+
+    FILE *fp;
+    long filesize;
+    struct json_object *jo_session;
+    char *buf;
+    size_t ret;
+    sq_session_t *sesh = NULL;
+
+    // open the file descriptor
+    fp = fopen(filename, "r");
+
+    // get the file size
+    fseek(fp, 0L, SEEK_END);
+    filesize = ftell(fp);
+    rewind(fp);
+
+    // allocate the read buffer
+    buf = malloc(filesize);
+
+    // read the file into the buffer, parse and instantiate the session
+    ret = fread(buf, 1, filesize, fp);
+    if (ret == filesize) {
+        jo_session = json_tokener_parse(buf);
+        sesh = sq_session_malloc_from_json(jo_session);
+    } else {
+        fprintf(stderr, "error while reading file: %s", filename);
+    }
+
+    // clean up
+    fclose(fp);
+    free(buf);
+
+    return sesh;
+
+}
+
+void sq_session_teardown(sq_session_t *sesh) {
+
+    // recursively frees all the malloc'd memory attributed to the session
+
+    sq_session_stop(sesh);
+    session_disconnect_jack(sesh);
+
+    // sequences
+    for (int i=0; i<sesh->nseqs; i++) {
+        sq_sequence_delete(sesh->seqs[i]);
+    }
+
+    // inports
+    for (int i=0; i<sesh->ninports; i++) {
+        sq_inport_delete(sesh->inports[i]);
+    }
+
+    // outports
+    for (int i=0; i<sesh->noutports; i++) {
+        sq_outport_delete(sesh->outports[i]);
+    }
+
+    // session
+    session_delete(sesh);
+
+}
+
+// LOCAL CODE
+
+static inline jack_nframes_t min_nframes(jack_nframes_t a, jack_nframes_t b ) {
 
     return a < b ? a : b;
 
 }
 
-void _session_ringbuffer_write(sq_session_t *sesh, _session_ctrl_msg_t *msg) {
+static void session_ringbuffer_write(sq_session_t *sesh, session_ctrl_msg_t *msg) {
 
     int avail = jack_ringbuffer_write_space(sesh->rb);
-    if (avail < sizeof(_session_ctrl_msg_t)) {
+    if (avail < sizeof(session_ctrl_msg_t)) {
         fprintf(stderr, "session ringbuffer: overflow\n");
         return;
     }
 
-    jack_ringbuffer_write(sesh->rb, (const char*) msg, sizeof(_session_ctrl_msg_t));
+    jack_ringbuffer_write(sesh->rb, (const char*) msg, sizeof(session_ctrl_msg_t));
 
 }
 
-void _session_reset_frame_counter(sq_session_t *sesh) {
+static void session_reset_frame_counter(sq_session_t *sesh) {
 
     sesh->frame = sesh->fps / 2;    // frame counter
 
 }
 
-void _session_serve_ctrl_msgs(sq_session_t *sesh) {
+static void session_serve_ctrl_msgs(sq_session_t *sesh) {
 
     int avail = jack_ringbuffer_read_space(sesh->rb);
-    _session_ctrl_msg_t msg;
-    while(avail >= sizeof(_session_ctrl_msg_t)) {
+    session_ctrl_msg_t msg;
+    while(avail >= sizeof(session_ctrl_msg_t)) {
 
-        jack_ringbuffer_read(sesh->rb, (char*) &msg, sizeof(_session_ctrl_msg_t));
+        jack_ringbuffer_read(sesh->rb, (char*) &msg, sizeof(session_ctrl_msg_t));
 
         if (msg.param == SESSION_GO) {
 
@@ -73,35 +441,35 @@ void _session_serve_ctrl_msgs(sq_session_t *sesh) {
                     sesh->seqs[i]->is_playing = false;
                     _sequence_reset_now(sesh->seqs[i]);
                 }
-                _session_reset_frame_counter(sesh);
+                session_reset_frame_counter(sesh);
             }
 
         } else if (msg.param == SESSION_BPM) {
 
-            _session_set_bpm_now(sesh, msg.vf);
+            session_set_bpm_now(sesh, msg.vf);
 
         } else if (msg.param == SESSION_ADD_SEQ) {
 
-            _session_add_sequence_now(sesh, msg.vp);
+            session_add_sequence_now(sesh, msg.vp);
 
         } else if (msg.param == SESSION_RM_SEQ) {
 
-            _session_rm_sequence_now(sesh, msg.vp);
+            session_rm_sequence_now(sesh, msg.vp);
 
         }
 
-        avail -= sizeof(_session_ctrl_msg_t);
+        avail -= sizeof(session_ctrl_msg_t);
 
     }
 
 }
 
-static int _process(jack_nframes_t nframes, void *arg) {
+static int session_process(jack_nframes_t nframes, void *arg) {
 
     sq_session_t *sesh = (sq_session_t*) arg;
     offNode_t *offp, **offpp;   // tmp vars
 
-    _session_serve_ctrl_msgs(sesh);
+    session_serve_ctrl_msgs(sesh);
 
     // serve the inports
     for (int i=0; i<sesh->ninports; i++) {
@@ -124,7 +492,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
     jack_nframes_t nframes_left, len;
     unsigned char *midi_msg_write_ptr;
 
-    midiEvent mevs[MAX_NSEQ];
+    midiEvent mevs[SESSION_MAX_NSEQ];
     size_t len_mevs = 0;
     midiEvent mev;     // midiEvent temp variable
     midiEvent *mevp;   // midiEvent* temp variable
@@ -134,7 +502,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
         // collect mevs (note-on and CC) for this processing block
         nframes_left = nframes;
         while(nframes_left) {
-            len = _min_nframes(nframes_left, sesh->fps - sesh->frame);
+            len = min_nframes(nframes_left, sesh->fps - sesh->frame);
                 for (int i=0; i<sesh->nseqs; i++) {
 
                     if (sesh->frame == 0) _sequence_step(sesh->seqs[i]);
@@ -194,71 +562,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 }
 
-// </helper>
-
-sq_session_t *sq_session_new(const char *client_name) {
-
-    sq_session_t *sesh;
-
-    sesh = malloc(sizeof(sq_session_t));
-
-    // initialize struct members
-    sesh->go = false;
-    sesh->nseqs = 0;
-    sesh->ninports = 0;
-    sesh->noutports = 0;
-    sesh->is_playing = false;
-
-    // seed random number generator with system time
-    srandom(time(NULL));
-
-    // open jack client
-    sesh->jack_client = jack_client_open(client_name, JackNoStartServer, NULL);
-	if (sesh->jack_client == NULL) {
-        fprintf(stderr, "sequoia failed to open JACK client\n");
-        exit(1);
-	}
-
-    // get jack server parameters
-    sesh->sr = jack_get_sample_rate(sesh->jack_client);
-    sesh->bs = jack_get_buffer_size(sesh->jack_client);
-
-    _session_set_bpm_now(sesh, DEFAULT_BPM);    // this also sets fps
-
-    _session_reset_frame_counter(sesh);
-
-    // set jack process callback
-	jack_set_process_callback(sesh->jack_client, _process, sesh);
-
-    // allocate and lock ringbuffer
-    sesh->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(_session_ctrl_msg_t));
-    int err = jack_ringbuffer_mlock(sesh->rb);
-    if (err) {
-        fprintf(stderr, "failed to lock ringbuffer\n");
-        exit(1);
-    }
-
-    // allocate and initialize note-off buffer, plus offHeap
-    sesh->len_off = sesh->fps * TRIG_MAX_LENGTH;
-    sesh->buf_off = malloc(sizeof(offNode_t*) * sesh->len_off);
-    for (size_t i=0; i<sesh->len_off; i++) {
-        sesh->buf_off[i] = NULL;
-    }
-    sesh->idx_off = 0;
-    sesh->offHeap = offHeap_new(MAX_NSEQ * MAX_SEQ_NSTEPS);
-
-    // activate jack client
-	if (jack_activate(sesh->jack_client)) {
-		fprintf(stderr, "failed to activate client\n");
-        exit(1);
-	}
-
-    return sesh;
-
-}
-
-
-void sq_session_disconnect_jack(sq_session_t *sesh) {
+static void session_disconnect_jack(sq_session_t *sesh) {
 
     if (jack_client_close(sesh->jack_client)) {
         fprintf(stderr, "sequoia failed to disconnect jack client\n");
@@ -266,135 +570,7 @@ void sq_session_disconnect_jack(sq_session_t *sesh) {
 
 }
 
-int sq_session_register_outport(sq_session_t *sesh, sq_outport_t *outport) {
-
-    jack_port_t *jack_port;
-
-    if (sesh->noutports == MAX_NOUTPORTS) {
-        fprintf(stderr, "max number of outports reached: %d\n", MAX_NOUTPORTS);
-        return -1;
-    }
-
-    jack_port = jack_port_register(sesh->jack_client, outport->name,
-                                    JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
-
-    if (!jack_port) {
-        fprintf(stderr, "failed to create JACK port\n");
-        return -1;
-    }
-
-    outport->jack_client = sesh->jack_client;
-    outport->jack_port = jack_port;
-
-    sesh->outports[sesh->noutports] = outport;
-    sesh->noutports++;
-
-    return 0;
-
-}
-
-sq_outport_t *sq_session_get_outport_from_name(sq_session_t *sesh, const char *name) {
-
-    for (int i=0; i<sesh->noutports; i++) {
-        if (strcmp(sesh->outports[i]->name, name) == 0) {
-            return sesh->outports[i];
-        }
-    }
-
-    return NULL;
-
-}
-
-int sq_session_register_inport(sq_session_t *sesh, sq_inport_t *inport) {
-
-    jack_port_t *jack_port;
-
-    if (sesh->ninports == MAX_NINPORTS) {
-        fprintf(stderr, "max number of inports reached: %d\n", MAX_NINPORTS);
-        return -1;
-    }
-
-    jack_port = jack_port_register(sesh->jack_client, inport->name,
-                                    JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
-
-    if (!jack_port) {
-        fprintf(stderr, "failed to create JACK port\n");
-        return -1;
-    }
-
-    inport->jack_client = sesh->jack_client;
-    inport->jack_port = jack_port;
-
-    sesh->inports[sesh->ninports] = inport;
-    sesh->ninports++;
-
-    return 0;
-
-}
-
-sq_inport_t *sq_session_get_inport_from_name(sq_session_t *sesh, const char *name) {
-
-    for (int i=0; i<sesh->ninports; i++) {
-        if (strcmp(sesh->inports[i]->name, name) == 0) {
-            return sesh->inports[i];
-        }
-    }
-
-    return NULL;
-
-}
-
-void sq_session_start(sq_session_t *sesh) {
-
-    if (!sesh->is_playing) {
-
-        _session_ctrl_msg_t msg;
-        msg.param = SESSION_GO;
-        msg.vb = true;
-
-        _session_ringbuffer_write(sesh, &msg);
-
-        sesh->is_playing = true;
-
-    }
-
-}
-
-void sq_session_stop(sq_session_t *sesh) {
-
-    if (sesh->is_playing) {
-
-        _session_ctrl_msg_t msg;
-        msg.param = SESSION_GO;
-        msg.vb = false;
-
-        _session_ringbuffer_write(sesh, &msg);
-
-        sesh->is_playing = false;
-
-    }
-
-}
-
-void sq_session_set_bpm(sq_session_t *sesh, float bpm) {
-
-    if (sesh->is_playing) {
-
-        _session_ctrl_msg_t msg;
-        msg.param = SESSION_BPM;
-        msg.vf = bpm;
-
-        _session_ringbuffer_write(sesh, &msg);
-
-    } else {
-
-        _session_set_bpm_now(sesh, bpm);
-
-    }
-
-}
-
-void _session_set_bpm_now(sq_session_t *sesh, float bpm) {
+static void session_set_bpm_now(sq_session_t *sesh, float bpm) {
 
     sesh->bpm = bpm;
 
@@ -406,7 +582,7 @@ void _session_set_bpm_now(sq_session_t *sesh, float bpm) {
 
     // if an increase in tempo has lowered the fps below the current frame index,
     //  then reset the frame index to avoid a runaway frame count
-    // (note that we could also achieve this using (sesh->frame >= sesh->fps) in _process(),
+    // (note that we could also achieve this using (sesh->frame >= sesh->fps) in session_process(),
     //  but this method ensures that we don't skip a beat on tempo increases)
     // HOWEVER it's worth considering: would we *rather* skip a beat?
     if (sesh->frame >= sesh->fps) {
@@ -415,53 +591,14 @@ void _session_set_bpm_now(sq_session_t *sesh, float bpm) {
 
 }
 
-void sq_session_add_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
-
-    if (sesh->is_playing) {
-
-        _session_ctrl_msg_t msg;
-        msg.param = SESSION_ADD_SEQ;
-        msg.vp = seq;
-
-        _session_ringbuffer_write(sesh, &msg);
-
-    } else {
-
-        _session_add_sequence_now(sesh, seq);
-
-    }
-
-}
-
-void _session_add_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
+static void session_add_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
 
     sesh->seqs[sesh->nseqs] = seq;
     sesh->nseqs++;
 
 }
 
-void sq_session_rm_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
-
-    // NOTE: this does not free the memory pointed to by seq;
-    //  the caller must do that explicitly
-
-    if (sesh->is_playing) {
-
-        _session_ctrl_msg_t msg;
-        msg.param = SESSION_RM_SEQ;
-        msg.vp = seq;
-
-        _session_ringbuffer_write(sesh, &msg);
-
-    } else {
-
-        _session_rm_sequence_now(sesh, seq);
-
-    }
-
-}
-
-void _session_rm_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
+static void session_rm_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
 
     int i;
 
@@ -480,35 +617,7 @@ void _session_rm_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
 
 }
 
-sq_sequence_t *sq_session_get_sequence_from_name(sq_session_t *sesh, const char *name) {
-
-    for (int i=0; i<sesh->nseqs; i++) {
-        if (strcmp(sesh->seqs[i]->name, name) == 0) {
-            return sesh->seqs[i];
-        }
-    }
-
-    return NULL;
-
-}
-
-char *sq_session_get_name(sq_session_t *sesh) {
-
-    return jack_get_client_name(sesh->jack_client);
-
-}
-
-// read-only getters don't need to use ringbuffers
-
-float sq_session_get_bpm(sq_session_t *sesh) {
-
-    return sesh->bpm;
-
-}
-
-////
-
-json_object *sq_session_get_json(sq_session_t *sesh) {
+static json_object *sq_session_get_json(sq_session_t *sesh) {
 
     json_object *jo_session = json_object_new_object();
 
@@ -544,55 +653,7 @@ json_object *sq_session_get_json(sq_session_t *sesh) {
 
 }
 
-void sq_session_save(sq_session_t *sesh, const char *filename) {
-
-    FILE *fp;
-
-    fp = fopen(filename, "w+");
-    fprintf(fp, "%s", json_object_to_json_string_ext(sq_session_get_json(sesh),
-                                                    JSON_C_TO_STRING_PRETTY));
-    fclose(fp);
-
-}
-
-sq_session_t *sq_session_load(const char *filename) {
-
-    FILE *fp;
-    long filesize;
-    struct json_object *jo_session;
-    char *buf;
-    size_t ret;
-    sq_session_t *sesh = NULL;
-
-    // open the file descriptor
-    fp = fopen(filename, "r");
-
-    // get the file size
-    fseek(fp, 0L, SEEK_END);
-    filesize = ftell(fp);
-    rewind(fp);
-
-    // allocate the read buffer
-    buf = malloc(filesize);
-
-    // read the file into the buffer, parse and instantiate the session
-    ret = fread(buf, 1, filesize, fp);
-    if (ret == filesize) {
-        jo_session = json_tokener_parse(buf);
-        sesh = sq_session_malloc_from_json(jo_session);
-    } else {
-        fprintf(stderr, "error while reading file: %s", filename);
-    }
-
-    // clean up
-    fclose(fp);
-    free(buf);
-
-    return sesh;
-
-}
-
-sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
+static sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
 
     struct json_object *jo_tmp, *jo_tmp2, *jo_tmp3, *jo_tmp4;
     const char *name;
@@ -659,40 +720,13 @@ sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
 
 }
 
-void sq_session_delete(sq_session_t *sesh) {
+static void session_delete(sq_session_t *sesh) {
 
     // frees the sq_session_t struct (but not its sequences, ports, etc)
 
     offHeap_delete(sesh->offHeap);
     free(sesh->buf_off);
     free(sesh);
-
-}
-
-void sq_session_teardown(sq_session_t *sesh) {
-
-    // recursively frees all the malloc'd memory attributed to the session
-
-    sq_session_stop(sesh);
-    sq_session_disconnect_jack(sesh);
-
-    // sequences
-    for (int i=0; i<sesh->nseqs; i++) {
-        sq_sequence_delete(sesh->seqs[i]);
-    }
-
-    // inports
-    for (int i=0; i<sesh->ninports; i++) {
-        sq_inport_delete(sesh->inports[i]);
-    }
-
-    // outports
-    for (int i=0; i<sesh->noutports; i++) {
-        sq_outport_delete(sesh->outports[i]);
-    }
-
-    // session
-    sq_session_delete(sesh);
 
 }
 
