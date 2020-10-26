@@ -31,7 +31,7 @@
 #define STEPS_PER_BEAT 4
 #define SECONDS_PER_MINUTE 60
 #define DEFAULT_BPM 120.00 
-#define RINGBUFFER_LENGTH 16
+#define SESSION_RB_LENGTH 16
 
 enum session_param {SESSION_GO, SESSION_BPM, SESSION_ADD_SEQ, SESSION_RM_SEQ};
 
@@ -100,7 +100,7 @@ sq_session_t *sq_session_new(const char *client_name) {
 	jack_set_process_callback(sesh->jack_client, session_process, sesh);
 
     // allocate and lock ringbuffer
-    sesh->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(session_ctrl_msg_t));
+    sesh->rb = jack_ringbuffer_create(SESSION_RB_LENGTH * sizeof(session_ctrl_msg_t));
     int err = jack_ringbuffer_mlock(sesh->rb);
     if (err) {
         fprintf(stderr, "failed to lock ringbuffer\n");
@@ -114,7 +114,7 @@ sq_session_t *sq_session_new(const char *client_name) {
         sesh->buf_off[i] = NULL;
     }
     sesh->idx_off = 0;
-    sesh->offHeap = offHeap_new(SESSION_MAX_NSEQ * MAX_SEQ_NSTEPS);
+    sesh->offHeap = offHeap_new(SESSION_MAX_NSEQ * SEQUENCE_MAX_NSTEPS);
 
     // activate jack client
 	if (jack_activate(sesh->jack_client)) {
@@ -439,7 +439,7 @@ static void session_serve_ctrl_msgs(sq_session_t *sesh) {
             } else {
                 for (int i=0; i<sesh->nseqs; i++) {
                     sesh->seqs[i]->is_playing = false;
-                    _sequence_reset_now(sesh->seqs[i]);
+                    sequence_reset_now(sesh->seqs[i]);
                 }
                 session_reset_frame_counter(sesh);
             }
@@ -505,8 +505,8 @@ static int session_process(jack_nframes_t nframes, void *arg) {
             len = min_nframes(nframes_left, sesh->fps - sesh->frame);
                 for (int i=0; i<sesh->nseqs; i++) {
 
-                    if (sesh->frame == 0) _sequence_step(sesh->seqs[i]);
-                    mev = _sequence_process(sesh->seqs[i], sesh->fps,
+                    if (sesh->frame == 0) sequence_step(sesh->seqs[i]);
+                    mev = sequence_process(sesh->seqs[i], sesh->fps,
                                         sesh->frame, len, nframes - nframes_left);
                     if (mev.buf) mevs[len_mevs++] = mev;    // check for NULL
                     if (mev.type == MEV_TYPE_NOTEON) {      // queue note off
@@ -630,7 +630,7 @@ static json_object *sq_session_get_json(sq_session_t *sesh) {
     // sequences
     json_object *sequence_array = json_object_new_array();
     for (int i=0; i<sesh->nseqs; i++) {
-        json_object_array_add(sequence_array, sq_sequence_get_json(sesh->seqs[i]));
+        json_object_array_add(sequence_array, sequence_get_json(sesh->seqs[i]));
     }
     json_object_object_add(jo_session, "sequences", sequence_array);
     
@@ -685,7 +685,7 @@ static sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
     json_object_object_get_ex(jo_session, "sequences", &jo_tmp);
     for (int i=0; i<json_object_array_length(jo_tmp); i++) {
         jo_tmp2 = json_object_array_get_idx(jo_tmp, i);
-        seq_tmp = sq_sequence_malloc_from_json(jo_tmp2);
+        seq_tmp = sequence_malloc_from_json(jo_tmp2);
         // outport remains null, resolve it now
         json_object_object_get_ex(jo_tmp2, "outport", &jo_tmp3);
         if (json_object_get_type(jo_tmp3) == json_type_string) {

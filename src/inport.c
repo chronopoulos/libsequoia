@@ -35,7 +35,7 @@ void _inport_sanitize_name(sq_inport_t *inport, const char *name) {
     if (strlen(name) <= INPORT_MAX_NAME_LEN) {
         strcpy(inport->name, name);
     } else {
-        strncpy(inport->name, name, MAX_SEQ_NAME_LEN);
+        strncpy(inport->name, name, SEQUENCE_MAX_NAME_LEN);
         inport->name[INPORT_MAX_NAME_LEN] = '\0';
     }
 
@@ -110,28 +110,28 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
                 case INPORT_TRANSPOSE:
                     // bipolar mapping centered at 60
                     for (int i=0; i<inport->nseqs; i++) {
-                        _sequence_set_transpose_now(inport->seqs[i], ev.buffer[1] - 60);
+                        sequence_set_transpose_now(inport->seqs[i], ev.buffer[1] - 60);
                     }
                     break;
                 case INPORT_PLAYHEAD:
                     // distance from 60 is taken modulo the sequence length
                     for (int i=0; i<inport->nseqs; i++) {
                         iarg = _mod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
-                        _sequence_set_playhead_now(inport->seqs[i], iarg);
+                        sequence_set_playhead_now(inport->seqs[i], iarg);
                     }
                     break;
                 case INPORT_CLOCKDIVIDE:
                     // absolute value from 60, plus 1 (so no clockdivide less than 1)
                     iarg = 1 + abs(ev.buffer[1] - 60);
                     for (int i=0; i<inport->nseqs; i++) {
-                        _sequence_set_clockdivide_now(inport->seqs[i], iarg);
+                        sequence_set_clockdivide_now(inport->seqs[i], iarg);
                     }
                     break;
                 case INPORT_MUTE:
                     // even=mute, odd=unmute
                     barg = ((ev.buffer[1] % 2) == 0);
                     for (int i=0; i<inport->nseqs; i++) {
-                        _sequence_set_mute_now(inport->seqs[i], barg);
+                        sequence_set_mute_now(inport->seqs[i], barg);
                     }
                     break;
                 case INPORT_DIRECTION:
@@ -141,14 +141,14 @@ void _inport_serve(sq_inport_t *inport, jack_nframes_t nframes) {
                     // distance from 60 is taken modulo the sequence length
                     for (int i=0; i<inport->nseqs; i++) {
                         iarg = _mod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
-                        _sequence_set_first_now(inport->seqs[i], iarg);
+                        sequence_set_first_now(inport->seqs[i], iarg);
                     }
                     break;
                 case INPORT_LAST:
                     // distance from 60 is taken modulo the sequence length
                     for (int i=0; i<inport->nseqs; i++) {
                         iarg = _mod(ev.buffer[1] - 60, inport->seqs[i]->nsteps);
-                        _sequence_set_last_now(inport->seqs[i], iarg);
+                        sequence_set_last_now(inport->seqs[i], iarg);
                     }
                     break;
                 default:

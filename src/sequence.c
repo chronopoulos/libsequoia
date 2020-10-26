@@ -28,60 +28,36 @@
 #include "sequoia.h"
 #include "sequoia/midiEvent.h"
 
-// <helper>
+// LOCAL DECLARATIONS
 
-void _sequence_ringbuffer_write(sq_sequence_t *seq, _sequence_ctrl_msg_t *msg) {
+#define SEQUENCE_RB_LENGTH 16
 
-    int avail = jack_ringbuffer_write_space(seq->rb);
-    if (avail < sizeof(_sequence_ctrl_msg_t)) {
-        fprintf(stderr, "sequence ringbuffer: overflow\n");
-        return;
-    }
+enum sequence_param {SEQUENCE_SET_TRIG, SEQUENCE_CLEAR_TRIG, SEQUENCE_TRANSPOSE, SEQUENCE_PH,
+                        SEQUENCE_DIV, SEQUENCE_MUTE, SEQUENCE_FIRST, SEQUENCE_LAST};
 
-    jack_ringbuffer_write(seq->rb, (const char*) msg, sizeof(_sequence_ctrl_msg_t));
+typedef struct {
 
-}
+    enum sequence_param param;
 
-void _sequence_serve_ctrl_msgs(sq_sequence_t *seq) {
+    // parameter-dependent value fields
+    int vi;
+    float vf;
+    bool vb;
+    sq_trigger_t *vp;
 
-    int avail = jack_ringbuffer_read_space(seq->rb);
-    _sequence_ctrl_msg_t msg;
-    while(avail >= sizeof(_sequence_ctrl_msg_t)) {
+} sequence_ctrl_msg_t;
 
-        jack_ringbuffer_read(seq->rb, (char*) &msg, sizeof(_sequence_ctrl_msg_t));
+static void sequence_ringbuffer_write(sq_sequence_t*, sequence_ctrl_msg_t*);
+static void sequence_serve_ctrl_msgs(sq_sequence_t*);
 
-        if (msg.param == SEQUENCE_SET_TRIG) {
-            _sequence_set_trig_now(seq, msg.vi, msg.vp);
-        } else if (msg.param == SEQUENCE_CLEAR_TRIG) {
-            _sequence_clear_trig_now(seq, msg.vi);
-        } else if (msg.param == SEQUENCE_TRANSPOSE) {
-            _sequence_set_transpose_now(seq, msg.vi);
-        } else if (msg.param == SEQUENCE_PH) {
-            _sequence_set_playhead_now(seq, msg.vi);
-        } else if (msg.param == SEQUENCE_FIRST) {
-            _sequence_set_first_now(seq, msg.vi);
-        } else if (msg.param == SEQUENCE_LAST) {
-            _sequence_set_last_now(seq, msg.vi);
-        } else if (msg.param == SEQUENCE_DIV) {
-            _sequence_set_clockdivide_now(seq, msg.vi);
-        } else if (msg.param == SEQUENCE_MUTE) {
-            _sequence_set_mute_now(seq, msg.vb);
-        }
-
-        avail -= sizeof(_sequence_ctrl_msg_t);
-
-    }
-
-}
-
-// </helper>
+// INTERFACE CODE
 
 sq_sequence_t *sq_sequence_new(int nsteps) {
 
     sq_sequence_t *seq;
 
-    if (nsteps > MAX_SEQ_NSTEPS) {
-        fprintf(stderr, "nsteps of %d exceeds max of %d\n", nsteps, MAX_SEQ_NSTEPS);
+    if (nsteps > SEQUENCE_MAX_NSTEPS) {
+        fprintf(stderr, "nsteps of %d exceeds max of %d\n", nsteps, SEQUENCE_MAX_NSTEPS);
         exit(1);
     }
 
@@ -99,7 +75,7 @@ sq_sequence_t *sq_sequence_new(int nsteps) {
     }
 
     // allocate and lock ringbuffer (universal ringbuffer length?)
-    seq->rb = jack_ringbuffer_create(RINGBUFFER_LENGTH * sizeof(_sequence_ctrl_msg_t));
+    seq->rb = jack_ringbuffer_create(SEQUENCE_RB_LENGTH * sizeof(sequence_ctrl_msg_t));
     int err = jack_ringbuffer_mlock(seq->rb);
     if (err) {
         fprintf(stderr, "failed to lock ringbuffer\n");
@@ -118,9 +94,16 @@ sq_sequence_t *sq_sequence_new(int nsteps) {
     sq_sequence_noti_init(&seq->noti);
     seq->noti_enable = false;
 
-    _sequence_reset_now(seq);
+    sequence_reset_now(seq);
 
     return seq;
+
+}
+
+void sq_sequence_delete(sq_sequence_t *seq) {
+
+    free(seq->trigs);
+    free(seq);
 
 }
 
@@ -147,102 +130,15 @@ void sq_sequence_noti_init(sq_sequence_noti_t *noti) {
 
 }
 
-void _sequence_reset_now(sq_sequence_t *seq) {
-
-    seq->idiv = 0;
-    seq->step = seq->first;
-
-    if (seq->noti_enable) {
-        seq->noti.playhead = seq->first;
-        seq->noti.playhead_new = true;
-    }
-
-}
-
-midiEvent _sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
-                        jack_nframes_t start, jack_nframes_t len, jack_nframes_t buf_offset) {
-
-    sq_trigger_t *trig;
-    jack_nframes_t frame_trig;
-    midiEvent mev; // tmp value
-
-    if (start + len > fps) {   // this should never happen
-        fprintf(stderr, "_sequence_process() crossed step boundary: %s\n", seq->name);
-        return MIDIEVENT_NULL;
-    }
-
-    // serve any control messages in the ringbuffer
-    _sequence_serve_ctrl_msgs(seq);
-
-    // output JACK MIDI
-    if (!seq->mute && seq->outport && !seq->idiv) {
-        trig = seq->trigs + seq->step;
-        if (trig->type != TRIG_NULL) {
-            if (trig->probability >= ((float) random()) / RAND_MAX) {
-                frame_trig = fps * (0.5 + trig->microtime);  // round down
-                if ((frame_trig >= start) && (frame_trig < start + len)) {
-
-                    mev.buf = seq->outport->buf;
-                    mev.time = frame_trig - start;
-                    if (trig->type == TRIG_NOTE) {
-                        mev.type = MEV_TYPE_NOTEON;
-                        mev.status = 143 + trig->channel;   // note on
-                        mev.data1 = trig->note + seq->transpose;
-                        mev.data2 = trig->velocity;
-                        mev.length = trig->length * fps;
-                    } else if (trig->type == TRIG_CC) {
-                        mev.type = MEV_TYPE_CC;
-                        mev.status = 175 + trig->channel;   // control change
-                        mev.data1 = trig->cc_number;
-                        mev.data2 = trig->cc_value;
-                    }
-
-                    return mev;
-
-                }
-            }
-        }
-    }
-
-    return MIDIEVENT_NULL;
-
-}
-
-void _sequence_step(sq_sequence_t *seq) {
-
-    seq->idiv++;
-
-    if (seq->idiv == seq->div) {
-
-        // increment
-        if (seq->step == seq->last) {
-            seq->step = seq->first;
-        } else if (++(seq->step) == seq->nsteps) {
-            seq->step = 0;
-        }
-
-        // and send a notification
-        if (seq->noti_enable) {
-            seq->noti.playhead = seq->step;
-            seq->noti.playhead_new = true;
-        }
-
-        // and reset the counter
-        seq->idiv = 0;
-
-    }
-
-}
-
 void sq_sequence_set_name(sq_sequence_t *seq, const char *name) {
 
     // this parameter is safe to touch directly (for now)
 
-    if (strlen(name) <= MAX_SEQ_NAME_LEN) {
+    if (strlen(name) <= SEQUENCE_MAX_NAME_LEN) {
         strcpy(seq->name, name);
     } else {
-        strncpy(seq->name, name, MAX_SEQ_NAME_LEN);
-        seq->name[MAX_SEQ_NAME_LEN] = '\0';
+        strncpy(seq->name, name, SEQUENCE_MAX_NAME_LEN);
+        seq->name[SEQUENCE_MAX_NAME_LEN] = '\0';
     }
 
 }
@@ -257,60 +153,36 @@ void sq_sequence_set_trig(sq_sequence_t *seq, int step_index, sq_trigger_t *trig
 
     if (seq->is_playing) {
 
-        _sequence_ctrl_msg_t msg;
+        sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_SET_TRIG;
         msg.vi = step_index;
         msg.vp = trig;
 
-        _sequence_ringbuffer_write(seq, &msg);
+        sequence_ringbuffer_write(seq, &msg);
 
     } else {
 
-        _sequence_set_trig_now(seq, step_index, trig);
+        sequence_set_trig_now(seq, step_index, trig);
 
     }
 
 }
-
-void _sequence_set_trig_now(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
-
-    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
-        fprintf(stderr, "step index %d out of range\n", step_index);
-        return;
-    }
-
-    memcpy(seq->trigs + step_index, trig, sizeof(sq_trigger_t));
-
-}
-
 
 void sq_sequence_clear_trig(sq_sequence_t *seq, int step_index) {
 
     if (seq->is_playing) {
 
-        _sequence_ctrl_msg_t msg;
+        sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_SET_TRIG;
         msg.vi = step_index;
 
-        _sequence_ringbuffer_write(seq, &msg);
+        sequence_ringbuffer_write(seq, &msg);
 
     } else {
 
-        _sequence_clear_trig_now(seq, step_index);
+        sequence_clear_trig_now(seq, step_index);
 
     }
-
-}
-
-void _sequence_clear_trig_now(sq_sequence_t *seq, int step_index) {
-
-    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
-        fprintf(stderr, "step index %d out of range\n", step_index);
-        return;
-    }
-
-    sq_trigger_t *trig = seq->trigs + step_index;
-    trig->type = TRIG_NULL;
 
 }
 
@@ -318,27 +190,16 @@ void sq_sequence_set_transpose(sq_sequence_t *seq, int transpose) {
 
     if (seq->is_playing) {
 
-        _sequence_ctrl_msg_t msg;
+        sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_TRANSPOSE;
         msg.vi = transpose;
 
-        _sequence_ringbuffer_write(seq, &msg);
+        sequence_ringbuffer_write(seq, &msg);
 
     } else {
 
-        _sequence_set_transpose_now(seq, transpose);
+        sequence_set_transpose_now(seq, transpose);
 
-    }
-
-}
-
-void _sequence_set_transpose_now(sq_sequence_t *seq, int transpose) {
-
-    seq->transpose = transpose;
-
-    if (seq->noti_enable) {
-        seq->noti.transpose = transpose;
-        seq->noti.transpose_new = true;
     }
 
 }
@@ -347,32 +208,16 @@ void sq_sequence_set_playhead(sq_sequence_t *seq, int ph) {
 
     if (seq->is_playing) {
 
-        _sequence_ctrl_msg_t msg;
+        sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_PH;
         msg.vi = ph;
 
-        _sequence_ringbuffer_write(seq, &msg);
+        sequence_ringbuffer_write(seq, &msg);
 
     } else {
 
-        _sequence_set_playhead_now(seq, ph);
+        sequence_set_playhead_now(seq, ph);
 
-    }
-
-}
-
-void _sequence_set_playhead_now(sq_sequence_t *seq, int ph) {
-
-    if ( (ph < 0) || (ph >= seq->nsteps) ) {
-        fprintf(stderr, "playhead value out of range: %d\n", ph);
-        return;
-    }
-
-    seq->step = ph;
-
-    if (seq->noti_enable) {
-        seq->noti.playhead = ph;
-        seq->noti.playhead_new = true;
     }
 
 }
@@ -381,34 +226,17 @@ void sq_sequence_set_first(sq_sequence_t *seq, int first) {
 
     if (seq->is_playing) {
 
-        _sequence_ctrl_msg_t msg;
+        sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_FIRST;
         msg.vi = first;
 
-        _sequence_ringbuffer_write(seq, &msg);
+        sequence_ringbuffer_write(seq, &msg);
 
     } else {
 
-        _sequence_set_first_now(seq, first);
+        sequence_set_first_now(seq, first);
 
     }
-
-}
-
-void _sequence_set_first_now(sq_sequence_t *seq, int first) {
-
-    if ( (first < 0) || (first >= seq->nsteps) ) {
-        fprintf(stderr, "first value out of range: %d\n", first);
-        return;
-    }
-
-    seq->first = first;
-
-    if (seq->noti_enable) {
-        seq->noti.first = first;
-        seq->noti.first_new = true;
-    }
-
 
 }
 
@@ -416,32 +244,16 @@ void sq_sequence_set_last(sq_sequence_t *seq, int last) {
 
     if (seq->is_playing) {
 
-        _sequence_ctrl_msg_t msg;
+        sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_LAST;
         msg.vi = last;
 
-        _sequence_ringbuffer_write(seq, &msg);
+        sequence_ringbuffer_write(seq, &msg);
 
     } else {
 
-        _sequence_set_last_now(seq, last);
+        sequence_set_last_now(seq, last);
 
-    }
-
-}
-
-void _sequence_set_last_now(sq_sequence_t *seq, int last) {
-
-    if ( (last < 0) || (last >= seq->nsteps) ) {
-        fprintf(stderr, "last value out of range: %d\n", last);
-        return;
-    }
-
-    seq->last = last;
-
-    if (seq->noti_enable) {
-        seq->noti.last = last;
-        seq->noti.last_new = true;
     }
 
 }
@@ -450,33 +262,16 @@ void sq_sequence_set_clockdivide(sq_sequence_t *seq, int div) {
 
     if (seq->is_playing) {
 
-        _sequence_ctrl_msg_t msg;
+        sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_DIV;
         msg.vi = div;
 
-        _sequence_ringbuffer_write(seq, &msg);
+        sequence_ringbuffer_write(seq, &msg);
 
     } else {
 
-        _sequence_set_clockdivide_now(seq, div);
+        sequence_set_clockdivide_now(seq, div);
 
-    }
-
-}
-
-void _sequence_set_clockdivide_now(sq_sequence_t *seq, int div) {
-
-    if (div < 1) {
-        fprintf(stderr, "clock divide of %d is out of range (must be >= 1)\n", div);
-        return;
-    }
-
-    seq->div = div;
-    seq->idiv = 0;
-
-    if (seq->noti_enable) {
-        seq->noti.clockdivide = div;
-        seq->noti.clockdivide_new = true;
     }
 
 }
@@ -485,27 +280,16 @@ void sq_sequence_set_mute(sq_sequence_t *seq, bool mute) {
 
     if (seq->is_playing) {
 
-        _sequence_ctrl_msg_t msg;
+        sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_MUTE;
         msg.vb = mute;
 
-        _sequence_ringbuffer_write(seq, &msg);
+        sequence_ringbuffer_write(seq, &msg);
 
     } else {
 
-        _sequence_set_mute_now(seq, mute);
+        sequence_set_mute_now(seq, mute);
 
-    }
-
-}
-
-void _sequence_set_mute_now(sq_sequence_t *seq, bool mute) {
-
-    seq->mute = mute;
-
-    if (seq->noti_enable) {
-        seq->noti.mute = mute;
-        seq->noti.mute_new = true;
     }
 
 }
@@ -675,9 +459,96 @@ int sq_sequence_get_last(sq_sequence_t *seq) {
 
 }
 
-////
+// PUBLIC CODE
 
-json_object *sq_sequence_get_json(sq_sequence_t *seq) {
+void sequence_reset_now(sq_sequence_t *seq) {
+
+    seq->idiv = 0;
+    seq->step = seq->first;
+
+    if (seq->noti_enable) {
+        seq->noti.playhead = seq->first;
+        seq->noti.playhead_new = true;
+    }
+
+}
+
+midiEvent sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
+                        jack_nframes_t start, jack_nframes_t len, jack_nframes_t buf_offset) {
+
+    sq_trigger_t *trig;
+    jack_nframes_t frame_trig;
+    midiEvent mev; // tmp value
+
+    if (start + len > fps) {   // this should never happen
+        fprintf(stderr, "sequence_process() crossed step boundary: %s\n", seq->name);
+        return MIDIEVENT_NULL;
+    }
+
+    // serve any control messages in the ringbuffer
+    sequence_serve_ctrl_msgs(seq);
+
+    // output JACK MIDI
+    if (!seq->mute && seq->outport && !seq->idiv) {
+        trig = seq->trigs + seq->step;
+        if (trig->type != TRIG_NULL) {
+            if (trig->probability >= ((float) random()) / RAND_MAX) {
+                frame_trig = fps * (0.5 + trig->microtime);  // round down
+                if ((frame_trig >= start) && (frame_trig < start + len)) {
+
+                    mev.buf = seq->outport->buf;
+                    mev.time = frame_trig - start;
+                    if (trig->type == TRIG_NOTE) {
+                        mev.type = MEV_TYPE_NOTEON;
+                        mev.status = 143 + trig->channel;   // note on
+                        mev.data1 = trig->note + seq->transpose;
+                        mev.data2 = trig->velocity;
+                        mev.length = trig->length * fps;
+                    } else if (trig->type == TRIG_CC) {
+                        mev.type = MEV_TYPE_CC;
+                        mev.status = 175 + trig->channel;   // control change
+                        mev.data1 = trig->cc_number;
+                        mev.data2 = trig->cc_value;
+                    }
+
+                    return mev;
+
+                }
+            }
+        }
+    }
+
+    return MIDIEVENT_NULL;
+
+}
+
+void sequence_step(sq_sequence_t *seq) {
+
+    seq->idiv++;
+
+    if (seq->idiv == seq->div) {
+
+        // increment
+        if (seq->step == seq->last) {
+            seq->step = seq->first;
+        } else if (++(seq->step) == seq->nsteps) {
+            seq->step = 0;
+        }
+
+        // and send a notification
+        if (seq->noti_enable) {
+            seq->noti.playhead = seq->step;
+            seq->noti.playhead_new = true;
+        }
+
+        // and reset the counter
+        seq->idiv = 0;
+
+    }
+
+}
+
+json_object *sequence_get_json(sq_sequence_t *seq) {
 
     json_object *jo_sequence = json_object_new_object();
 
@@ -719,7 +590,7 @@ json_object *sq_sequence_get_json(sq_sequence_t *seq) {
 
 }
 
-sq_sequence_t *sq_sequence_malloc_from_json(json_object *jo_seq) {
+sq_sequence_t *sequence_malloc_from_json(json_object *jo_seq) {
 
     struct json_object *jo_tmp, *jo_trig;
     const char *name;
@@ -774,10 +645,160 @@ sq_sequence_t *sq_sequence_malloc_from_json(json_object *jo_seq) {
 
 }
 
-void sq_sequence_delete(sq_sequence_t *seq) {
+void sequence_set_trig_now(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
 
-    free(seq->trigs);
-    free(seq);
+    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
+        fprintf(stderr, "step index %d out of range\n", step_index);
+        return;
+    }
+
+    memcpy(seq->trigs + step_index, trig, sizeof(sq_trigger_t));
+
+}
+
+void sequence_clear_trig_now(sq_sequence_t *seq, int step_index) {
+
+    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
+        fprintf(stderr, "step index %d out of range\n", step_index);
+        return;
+    }
+
+    sq_trigger_t *trig = seq->trigs + step_index;
+    trig->type = TRIG_NULL;
+
+}
+
+void sequence_set_transpose_now(sq_sequence_t *seq, int transpose) {
+
+    seq->transpose = transpose;
+
+    if (seq->noti_enable) {
+        seq->noti.transpose = transpose;
+        seq->noti.transpose_new = true;
+    }
+
+}
+
+void sequence_set_playhead_now(sq_sequence_t *seq, int ph) {
+
+    if ( (ph < 0) || (ph >= seq->nsteps) ) {
+        fprintf(stderr, "playhead value out of range: %d\n", ph);
+        return;
+    }
+
+    seq->step = ph;
+
+    if (seq->noti_enable) {
+        seq->noti.playhead = ph;
+        seq->noti.playhead_new = true;
+    }
+
+}
+
+void sequence_set_first_now(sq_sequence_t *seq, int first) {
+
+    if ( (first < 0) || (first >= seq->nsteps) ) {
+        fprintf(stderr, "first value out of range: %d\n", first);
+        return;
+    }
+
+    seq->first = first;
+
+    if (seq->noti_enable) {
+        seq->noti.first = first;
+        seq->noti.first_new = true;
+    }
+
+
+}
+
+void sequence_set_last_now(sq_sequence_t *seq, int last) {
+
+    if ( (last < 0) || (last >= seq->nsteps) ) {
+        fprintf(stderr, "last value out of range: %d\n", last);
+        return;
+    }
+
+    seq->last = last;
+
+    if (seq->noti_enable) {
+        seq->noti.last = last;
+        seq->noti.last_new = true;
+    }
+
+}
+
+void sequence_set_clockdivide_now(sq_sequence_t *seq, int div) {
+
+    if (div < 1) {
+        fprintf(stderr, "clock divide of %d is out of range (must be >= 1)\n", div);
+        return;
+    }
+
+    seq->div = div;
+    seq->idiv = 0;
+
+    if (seq->noti_enable) {
+        seq->noti.clockdivide = div;
+        seq->noti.clockdivide_new = true;
+    }
+
+}
+
+void sequence_set_mute_now(sq_sequence_t *seq, bool mute) {
+
+    seq->mute = mute;
+
+    if (seq->noti_enable) {
+        seq->noti.mute = mute;
+        seq->noti.mute_new = true;
+    }
+
+}
+
+// STATIC CODE
+
+static void sequence_ringbuffer_write(sq_sequence_t *seq, sequence_ctrl_msg_t *msg) {
+
+    int avail = jack_ringbuffer_write_space(seq->rb);
+    if (avail < sizeof(sequence_ctrl_msg_t)) {
+        fprintf(stderr, "sequence ringbuffer: overflow\n");
+        return;
+    }
+
+    jack_ringbuffer_write(seq->rb, (const char*) msg, sizeof(sequence_ctrl_msg_t));
+
+}
+
+static void sequence_serve_ctrl_msgs(sq_sequence_t *seq) {
+
+    int avail = jack_ringbuffer_read_space(seq->rb);
+    sequence_ctrl_msg_t msg;
+    while(avail >= sizeof(sequence_ctrl_msg_t)) {
+
+        jack_ringbuffer_read(seq->rb, (char*) &msg, sizeof(sequence_ctrl_msg_t));
+
+        if (msg.param == SEQUENCE_SET_TRIG) {
+            sequence_set_trig_now(seq, msg.vi, msg.vp);
+        } else if (msg.param == SEQUENCE_CLEAR_TRIG) {
+            sequence_clear_trig_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_TRANSPOSE) {
+            sequence_set_transpose_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_PH) {
+            sequence_set_playhead_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_FIRST) {
+            sequence_set_first_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_LAST) {
+            sequence_set_last_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_DIV) {
+            sequence_set_clockdivide_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_MUTE) {
+            sequence_set_mute_now(seq, msg.vb);
+        }
+
+        avail -= sizeof(sequence_ctrl_msg_t);
+
+    }
 
 }
 
