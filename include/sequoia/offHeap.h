@@ -1,3 +1,6 @@
+#ifndef OFFHEAP_H
+#define OFFHEAP_H
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -22,3 +25,5 @@ void offHeap_delete(offHeap_t*);
 // methods
 offNode_t *offHeap_alloc(offHeap_t*);
 void offHeap_free(offHeap_t *offHeap, offNode_t *offNode);
+
+#endif
