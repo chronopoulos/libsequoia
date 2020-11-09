@@ -34,7 +34,7 @@ extern "C"{
 
 typedef struct session_data * sq_session_t;
 typedef struct sequence_data * sq_sequence_t;
-typedef struct trigger_data sq_trigger_t;
+typedef struct trigger_data * sq_trigger_t;
 typedef struct inport_data * sq_inport_t;
 typedef struct outport_data * sq_outport_t;
 
@@ -67,7 +67,7 @@ sq_sequence_t sq_sequence_new(int);
 void sq_sequence_delete(sq_sequence_t seq);
 void sq_sequence_set_name(sq_sequence_t, const char*);
 void sq_sequence_set_outport(sq_sequence_t, sq_outport_t);
-void sq_sequence_set_trig(sq_sequence_t, int, sq_trigger_t*);
+void sq_sequence_set_trig(sq_sequence_t, int, sq_trigger_t);
 void sq_sequence_clear_trig(sq_sequence_t, int);
 void sq_sequence_set_transpose(sq_sequence_t, int);
 void sq_sequence_set_playhead(sq_sequence_t, int);
@@ -90,13 +90,15 @@ bool sq_sequence_read_new_transpose(sq_sequence_t, int*);
 bool sq_sequence_read_new_clockdivide(sq_sequence_t, int*);
 bool sq_sequence_read_new_mute(sq_sequence_t, bool*);
 
-void sq_trigger_init(sq_trigger_t*);
-void sq_trigger_set_null(sq_trigger_t*);
-void sq_trigger_set_note(sq_trigger_t*, int, int, float);
-void sq_trigger_set_cc(sq_trigger_t*, int, int);
-void sq_trigger_set_probability(sq_trigger_t*, float);
-void sq_trigger_set_microtime(sq_trigger_t*, float);
-void sq_trigger_set_channel(sq_trigger_t*, int);
+//void sq_trigger_init(sq_trigger_t);
+sq_trigger_t sq_trigger_new(void);
+void sq_trigger_delete(sq_trigger_t);
+void sq_trigger_set_null(sq_trigger_t);
+void sq_trigger_set_note(sq_trigger_t, int, int, float);
+void sq_trigger_set_cc(sq_trigger_t, int, int);
+void sq_trigger_set_probability(sq_trigger_t, float);
+void sq_trigger_set_microtime(sq_trigger_t, float);
+void sq_trigger_set_channel(sq_trigger_t, int);
 
 sq_inport_t sq_inport_new(const char*);
 void sq_inport_delete(sq_inport_t);
@@ -108,19 +110,6 @@ sq_outport_t sq_outport_new(const char*);
 void sq_outport_delete(sq_outport_t);
 void sq_outport_set_name(sq_outport_t, const char*);
 char *sq_outport_get_name(sq_outport_t);
-
-///////////////////////////////
-// old way
-///////////////////////////////
-
-
-// #include "sequoia/session.h"
-// #include "sequoia/sequence.h"
-// #include "sequoia/trigger.h"
-// #include "sequoia/outport.h"
-// #include "sequoia/inport.h"
-
-///////////////////////////////
 
 #ifdef __cplusplus
 }

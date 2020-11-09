@@ -24,7 +24,106 @@
 
 // INTERFACE CODE
 
-void sq_trigger_init(sq_trigger_t *trig) {
+sq_trigger_t sq_trigger_new(void) {
+
+    sq_trigger_t trig;
+
+    trig = malloc(sizeof(struct trigger_data));
+
+    trigger_init(trig);
+
+    trig->type = TRIG_NULL;
+    trig->channel = 1;
+    trig->microtime = 0.;
+
+    trig->note = 60;
+    trig->velocity = 100;
+    trig->length = 0.5;
+
+    trig->cc_number = 0;
+    trig->cc_value = 0;
+
+    trig->probability = 1.;
+
+    return trig;
+
+}
+
+void sq_trigger_delete(sq_trigger_t trig) {
+
+    free(trig);
+
+}
+
+void sq_trigger_set_null(sq_trigger_t trig) {
+
+    trig->type = TRIG_NULL;
+
+}
+
+void sq_trigger_set_note(sq_trigger_t trig, int note, int velocity, float length) {
+
+    trig->type = TRIG_NOTE;
+    trig->note = note;
+    trig->velocity = velocity;
+    trig->length = length;
+    if (trig->length > TRIG_MAX_LENGTH) trig->length = TRIG_MAX_LENGTH;
+
+}
+
+void sq_trigger_set_cc(sq_trigger_t trig, int cc_number, int cc_value) {
+
+    trig->type = TRIG_CC;
+    trig->cc_number = cc_number;
+    trig->cc_value= cc_value;
+
+}
+
+void sq_trigger_set_probability(sq_trigger_t trig, float probability) {
+
+    if (probability < 0.) {
+        probability = 0.;
+    }
+
+    if (probability > 1.) {
+        probability = 1.;
+    }
+
+    trig->probability = probability;
+
+}
+
+void sq_trigger_set_microtime(sq_trigger_t trig, float microtime) {
+
+    if (microtime < -0.5) {
+        microtime = -0.5;
+    }
+
+    if (microtime >= 0.5) {
+        microtime = 0.4999;  // this is safe for tps < 10000 ?
+    }
+
+    trig->microtime = microtime;
+
+}
+
+void sq_trigger_set_channel(sq_trigger_t trig, int channel) {
+
+  if (channel < 1) {
+    channel = 1;
+  }
+
+  if (channel > 16) {
+    channel = 16;
+  }
+
+  trig->channel = channel;
+
+}
+
+// PUBLIC CODE
+
+void trigger_init(sq_trigger_t trig) {
 
     trig->type = TRIG_NULL;
     trig->channel = 1;
@@ -41,75 +140,7 @@ void sq_trigger_init(sq_trigger_t *trig) {
 
 }
 
-void sq_trigger_set_null(sq_trigger_t *trig) {
-
-    trig->type = TRIG_NULL;
-
-}
-
-void sq_trigger_set_note(sq_trigger_t *trig, int note, int velocity, float length) {
-
-    trig->type = TRIG_NOTE;
-    trig->note = note;
-    trig->velocity = velocity;
-    trig->length = length;
-    if (trig->length > TRIG_MAX_LENGTH) trig->length = TRIG_MAX_LENGTH;
-
-}
-
-void sq_trigger_set_cc(sq_trigger_t *trig, int cc_number, int cc_value) {
-
-    trig->type = TRIG_CC;
-    trig->cc_number = cc_number;
-    trig->cc_value= cc_value;
-
-}
-
-void sq_trigger_set_probability(sq_trigger_t *trig, float probability) {
-
-    if (probability < 0.) {
-        probability = 0.;
-    }
-
-    if (probability > 1.) {
-        probability = 1.;
-    }
-
-    trig->probability = probability;
-
-}
-
-void sq_trigger_set_microtime(sq_trigger_t *trig, float microtime) {
-
-    if (microtime < -0.5) {
-        microtime = -0.5;
-    }
-
-    if (microtime >= 0.5) {
-        microtime = 0.4999;  // this is safe for tps < 10000 ?
-    }
-
-    trig->microtime = microtime;
-
-}
-
-void sq_trigger_set_channel(sq_trigger_t *trig, int channel) {
-
-  if (channel < 1) {
-    channel = 1;
-  }
-
-  if (channel > 16) {
-    channel = 16;
-  }
-
-  trig->channel = channel;
-
-}
-
-// PUBLIC CODE
-
-json_object *trigger_get_json(sq_trigger_t *trig) {
+json_object *trigger_get_json(sq_trigger_t trig) {
 
     json_object *jo_trigger = json_object_new_object();
 
@@ -144,11 +175,12 @@ json_object *trigger_get_json(sq_trigger_t *trig) {
 
 }
 
-void trigger_from_json(json_object *jo_trig, sq_trigger_t *trig) {
+sq_trigger_t trigger_malloc_from_json(json_object *jo_trig) {
 
     struct json_object *jo_tmp;
     int type, channel, note, velocity, cc_number, cc_value;
     float microtime, length, probability;
+    sq_trigger_t trig;
 
     // first extract the attributes
 
@@ -181,7 +213,7 @@ void trigger_from_json(json_object *jo_trig, sq_trigger_t *trig) {
 
     // then set the trig
 
-    sq_trigger_init(trig);
+    trig = sq_trigger_new();
     switch (type) {
         case TRIG_NULL:
             sq_trigger_set_null(trig);
@@ -196,6 +228,8 @@ void trigger_from_json(json_object *jo_trig, sq_trigger_t *trig) {
     sq_trigger_set_channel(trig, channel);
     sq_trigger_set_microtime(trig, microtime);
     sq_trigger_set_probability(trig, probability);
+
+    return trig;
 
 }
 

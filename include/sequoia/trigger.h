@@ -45,8 +45,9 @@ struct trigger_data {
 
 };
 
-json_object *trigger_get_json(sq_trigger_t*);
-void trigger_from_json(json_object*, sq_trigger_t*);
+void trigger_init(sq_trigger_t);
+json_object *trigger_get_json(sq_trigger_t);
+sq_trigger_t trigger_malloc_from_json(json_object*);
 
 
 #endif

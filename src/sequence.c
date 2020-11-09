@@ -44,7 +44,7 @@ typedef struct {
     int vi;
     float vf;
     bool vb;
-    sq_trigger_t *vp;
+    sq_trigger_t vp;
 
 } sequence_ctrl_msg_t;
 
@@ -71,9 +71,9 @@ sq_sequence_t sq_sequence_new(int nsteps) {
 
     seq->div = 1;
 
-    seq->trigs = malloc(seq->nsteps * sizeof(sq_trigger_t));
+    seq->trigs = malloc(seq->nsteps * sizeof(struct trigger_data));
     for (int i=0; i<seq->nsteps; i++) {
-        sq_trigger_init(seq->trigs + i);
+        trigger_init(seq->trigs + i);
     }
 
     // allocate and lock ringbuffer (universal ringbuffer length?)
@@ -128,7 +128,7 @@ void sq_sequence_set_outport(sq_sequence_t seq, sq_outport_t outport) {
 
 }
 
-void sq_sequence_set_trig(sq_sequence_t seq, int step_index, sq_trigger_t *trig) {
+void sq_sequence_set_trig(sq_sequence_t seq, int step_index, sq_trigger_t trig) {
 
     if (seq->is_playing) {
 
@@ -455,7 +455,7 @@ void sequence_reset_now(sq_sequence_t seq) {
 midiEvent sequence_process(sq_sequence_t seq, jack_nframes_t fps,
                         jack_nframes_t start, jack_nframes_t len, jack_nframes_t buf_offset) {
 
-    sq_trigger_t *trig;
+    sq_trigger_t trig;
     jack_nframes_t frame_trig;
     midiEvent mev; // tmp value
 
@@ -616,22 +616,22 @@ sq_sequence_t sequence_malloc_from_json(json_object *jo_seq) {
     for (int i=0; i<nsteps; i++) {
         jo_trig = json_object_array_get_idx(jo_tmp, i);
         // trigs get copied into seqs, so we don't need to malloc them
-        trigger_from_json(jo_trig, &trig);
-        sq_sequence_set_trig(seq, i, &trig);
+        trig = trigger_malloc_from_json(jo_trig);
+        sq_sequence_set_trig(seq, i, trig);
     }
 
     return seq;
 
 }
 
-void sequence_set_trig_now(sq_sequence_t seq, int step_index, sq_trigger_t *trig) {
+void sequence_set_trig_now(sq_sequence_t seq, int step_index, sq_trigger_t trig) {
 
     if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
         fprintf(stderr, "step index %d out of range\n", step_index);
         return;
     }
 
-    memcpy(seq->trigs + step_index, trig, sizeof(sq_trigger_t));
+    memcpy(seq->trigs + step_index, trig, sizeof(struct trigger_data));
 
 }
 
@@ -642,7 +642,7 @@ void sequence_clear_trig_now(sq_sequence_t seq, int step_index) {
         return;
     }
 
-    sq_trigger_t *trig = seq->trigs + step_index;
+    sq_trigger_t trig = seq->trigs + step_index;
     trig->type = TRIG_NULL;
 
 }
