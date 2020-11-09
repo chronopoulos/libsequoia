@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "sequoia.h"
+#include "sequoia/session.h"
 #include "sequoia/midiEvent.h"
 
 // LOCAL DECLARATIONS
@@ -43,31 +44,29 @@ typedef struct {
     int vi;
     float vf;
     bool vb;
-    sq_sequence_t *vp;
+    sq_sequence_t vp;
 
 } session_ctrl_msg_t ;
 
-static void session_set_bpm_now(sq_session_t*, float);
-static void session_add_sequence_now(sq_session_t*, sq_sequence_t*);
-static void session_rm_sequence_now(sq_session_t*, sq_sequence_t*);
+static void session_set_bpm_now(sq_session_t, float);
+static void session_add_sequence_now(sq_session_t, sq_sequence_t);
+static void session_rm_sequence_now(sq_session_t, sq_sequence_t);
 static inline jack_nframes_t min_nframes(jack_nframes_t, jack_nframes_t);
-static void session_ringbuffer_write(sq_session_t*, session_ctrl_msg_t*);
-static void session_reset_frame_counter(sq_session_t *);
-static void session_serve_ctrl_msgs(sq_session_t*);
+static void session_ringbuffer_write(sq_session_t, session_ctrl_msg_t*);
+static void session_reset_frame_counter(sq_session_t );
+static void session_serve_ctrl_msgs(sq_session_t);
 static int session_process(jack_nframes_t, void*);
-static void session_disconnect_jack(sq_session_t*);
-static void session_set_bpm_now(sq_session_t*, float);
-static void session_add_sequence_now(sq_session_t*, sq_sequence_t*);
-static void session_rm_sequence_now(sq_session_t*, sq_sequence_t*);
-static json_object *sq_session_get_json(sq_session_t*);
-static sq_session_t *sq_session_malloc_from_json(json_object*);
-static void session_delete(sq_session_t*);
+static void session_disconnect_jack(sq_session_t);
+static void session_set_bpm_now(sq_session_t, float);
+static void session_add_sequence_now(sq_session_t, sq_sequence_t);
+static void session_rm_sequence_now(sq_session_t, sq_sequence_t);
+static json_object *sq_session_get_json(sq_session_t);
+static sq_session_t sq_session_malloc_from_json(json_object*);
+static void session_delete(sq_session_t);
 
-// INTERFACE CODE
+sq_session_t sq_session_new(const char *client_name) {
 
-sq_session_t *sq_session_new(const char *client_name) {
-
-    sq_session_t *sesh;
+    sq_session_t sesh;
 
     sesh = malloc(sizeof(sq_session_t));
 
@@ -126,7 +125,7 @@ sq_session_t *sq_session_new(const char *client_name) {
 
 }
 
-int sq_session_register_outport(sq_session_t *sesh, sq_outport_t *outport) {
+int sq_session_register_outport(sq_session_t sesh, sq_outport_t outport) {
 
     jack_port_t *jack_port;
 
@@ -153,7 +152,7 @@ int sq_session_register_outport(sq_session_t *sesh, sq_outport_t *outport) {
 
 }
 
-sq_outport_t *sq_session_get_outport_from_name(sq_session_t *sesh, const char *name) {
+sq_outport_t sq_session_get_outport_from_name(sq_session_t sesh, const char *name) {
 
     for (int i=0; i<sesh->noutports; i++) {
         if (strcmp(sesh->outports[i]->name, name) == 0) {
@@ -165,7 +164,7 @@ sq_outport_t *sq_session_get_outport_from_name(sq_session_t *sesh, const char *n
 
 }
 
-int sq_session_register_inport(sq_session_t *sesh, sq_inport_t *inport) {
+int sq_session_register_inport(sq_session_t sesh, sq_inport_t inport) {
 
     jack_port_t *jack_port;
 
@@ -192,7 +191,7 @@ int sq_session_register_inport(sq_session_t *sesh, sq_inport_t *inport) {
 
 }
 
-sq_inport_t *sq_session_get_inport_from_name(sq_session_t *sesh, const char *name) {
+sq_inport_t sq_session_get_inport_from_name(sq_session_t sesh, const char *name) {
 
     for (int i=0; i<sesh->ninports; i++) {
         if (strcmp(sesh->inports[i]->name, name) == 0) {
@@ -204,7 +203,7 @@ sq_inport_t *sq_session_get_inport_from_name(sq_session_t *sesh, const char *nam
 
 }
 
-void sq_session_start(sq_session_t *sesh) {
+void sq_session_start(sq_session_t sesh) {
 
     if (!sesh->is_playing) {
 
@@ -220,7 +219,7 @@ void sq_session_start(sq_session_t *sesh) {
 
 }
 
-void sq_session_stop(sq_session_t *sesh) {
+void sq_session_stop(sq_session_t sesh) {
 
     if (sesh->is_playing) {
 
@@ -236,7 +235,7 @@ void sq_session_stop(sq_session_t *sesh) {
 
 }
 
-void sq_session_set_bpm(sq_session_t *sesh, float bpm) {
+void sq_session_set_bpm(sq_session_t sesh, float bpm) {
 
     if (sesh->is_playing) {
 
@@ -254,7 +253,7 @@ void sq_session_set_bpm(sq_session_t *sesh, float bpm) {
 
 }
 
-void sq_session_add_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
+void sq_session_add_sequence(sq_session_t sesh, sq_sequence_t seq) {
 
     if (sesh->is_playing) {
 
@@ -272,7 +271,7 @@ void sq_session_add_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
 
 }
 
-void sq_session_rm_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
+void sq_session_rm_sequence(sq_session_t sesh, sq_sequence_t seq) {
 
     // NOTE: this does not free the memory pointed to by seq;
     //  the caller must do that explicitly
@@ -295,7 +294,7 @@ void sq_session_rm_sequence(sq_session_t *sesh, sq_sequence_t *seq) {
 
 // read-only getters don't need to use ringbuffers
 
-sq_sequence_t *sq_session_get_sequence_from_name(sq_session_t *sesh, const char *name) {
+sq_sequence_t sq_session_get_sequence_from_name(sq_session_t sesh, const char *name) {
 
     for (int i=0; i<sesh->nseqs; i++) {
         if (strcmp(sesh->seqs[i]->name, name) == 0) {
@@ -307,19 +306,19 @@ sq_sequence_t *sq_session_get_sequence_from_name(sq_session_t *sesh, const char 
 
 }
 
-char *sq_session_get_name(sq_session_t *sesh) {
+char *sq_session_get_name(sq_session_t sesh) {
 
     return jack_get_client_name(sesh->jack_client);
 
 }
 
-float sq_session_get_bpm(sq_session_t *sesh) {
+float sq_session_get_bpm(sq_session_t sesh) {
 
     return sesh->bpm;
 
 }
 
-void sq_session_save(sq_session_t *sesh, const char *filename) {
+void sq_session_save(sq_session_t sesh, const char *filename) {
 
     FILE *fp;
 
@@ -330,14 +329,14 @@ void sq_session_save(sq_session_t *sesh, const char *filename) {
 
 }
 
-sq_session_t *sq_session_load(const char *filename) {
+sq_session_t sq_session_load(const char *filename) {
 
     FILE *fp;
     long filesize;
     struct json_object *jo_session;
     char *buf;
     size_t ret;
-    sq_session_t *sesh = NULL;
+    sq_session_t sesh = NULL;
 
     // open the file descriptor
     fp = fopen(filename, "r");
@@ -367,7 +366,7 @@ sq_session_t *sq_session_load(const char *filename) {
 
 }
 
-void sq_session_teardown(sq_session_t *sesh) {
+void sq_session_teardown(sq_session_t sesh) {
 
     // recursively frees all the malloc'd memory attributed to the session
 
@@ -402,7 +401,7 @@ static inline jack_nframes_t min_nframes(jack_nframes_t a, jack_nframes_t b ) {
 
 }
 
-static void session_ringbuffer_write(sq_session_t *sesh, session_ctrl_msg_t *msg) {
+static void session_ringbuffer_write(sq_session_t sesh, session_ctrl_msg_t *msg) {
 
     int avail = jack_ringbuffer_write_space(sesh->rb);
     if (avail < sizeof(session_ctrl_msg_t)) {
@@ -414,13 +413,13 @@ static void session_ringbuffer_write(sq_session_t *sesh, session_ctrl_msg_t *msg
 
 }
 
-static void session_reset_frame_counter(sq_session_t *sesh) {
+static void session_reset_frame_counter(sq_session_t sesh) {
 
     sesh->frame = sesh->fps / 2;    // frame counter
 
 }
 
-static void session_serve_ctrl_msgs(sq_session_t *sesh) {
+static void session_serve_ctrl_msgs(sq_session_t sesh) {
 
     int avail = jack_ringbuffer_read_space(sesh->rb);
     session_ctrl_msg_t msg;
@@ -466,7 +465,7 @@ static void session_serve_ctrl_msgs(sq_session_t *sesh) {
 
 static int session_process(jack_nframes_t nframes, void *arg) {
 
-    sq_session_t *sesh = (sq_session_t*) arg;
+    sq_session_t sesh = (sq_session_t) arg;
     offNode_t *offp, **offpp;   // tmp vars
 
     session_serve_ctrl_msgs(sesh);
@@ -480,7 +479,7 @@ static int session_process(jack_nframes_t nframes, void *arg) {
     // callback - EVEN IF the session isn't running. otherwise, stopping the
     // sequencer while an outport buffer has a note-on in it will lead to
     // rapidly repeating (machine-gun) note events
-    sq_outport_t *outport;
+    sq_outport_t outport;
     for (int i=0; i<sesh->noutports; i++) {
         outport = sesh->outports[i];
         outport->buf = jack_port_get_buffer(outport->jack_port, nframes);
@@ -562,7 +561,7 @@ static int session_process(jack_nframes_t nframes, void *arg) {
 
 }
 
-static void session_disconnect_jack(sq_session_t *sesh) {
+static void session_disconnect_jack(sq_session_t sesh) {
 
     if (jack_client_close(sesh->jack_client)) {
         fprintf(stderr, "sequoia failed to disconnect jack client\n");
@@ -570,7 +569,7 @@ static void session_disconnect_jack(sq_session_t *sesh) {
 
 }
 
-static void session_set_bpm_now(sq_session_t *sesh, float bpm) {
+static void session_set_bpm_now(sq_session_t sesh, float bpm) {
 
     sesh->bpm = bpm;
 
@@ -591,14 +590,14 @@ static void session_set_bpm_now(sq_session_t *sesh, float bpm) {
 
 }
 
-static void session_add_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
+static void session_add_sequence_now(sq_session_t sesh, sq_sequence_t seq) {
 
     sesh->seqs[sesh->nseqs] = seq;
     sesh->nseqs++;
 
 }
 
-static void session_rm_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
+static void session_rm_sequence_now(sq_session_t sesh, sq_sequence_t seq) {
 
     int i;
 
@@ -617,7 +616,7 @@ static void session_rm_sequence_now(sq_session_t *sesh, sq_sequence_t *seq) {
 
 }
 
-static json_object *sq_session_get_json(sq_session_t *sesh) {
+static json_object *sq_session_get_json(sq_session_t sesh) {
 
     json_object *jo_session = json_object_new_object();
 
@@ -653,15 +652,15 @@ static json_object *sq_session_get_json(sq_session_t *sesh) {
 
 }
 
-static sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
+static sq_session_t sq_session_malloc_from_json(json_object *jo_session) {
 
     struct json_object *jo_tmp, *jo_tmp2, *jo_tmp3, *jo_tmp4;
     const char *name;
     double bpm;
-    sq_session_t *sesh;
-    sq_sequence_t *seq_tmp = NULL;
-    sq_inport_t *inport_tmp = NULL;
-    sq_outport_t *outport_tmp = NULL;
+    sq_session_t sesh;
+    sq_sequence_t seq_tmp = NULL;
+    sq_inport_t inport_tmp = NULL;
+    sq_outport_t outport_tmp = NULL;
 
     // first extract the top-level attributes
     json_object_object_get_ex(jo_session, "name", &jo_tmp);
@@ -720,7 +719,7 @@ static sq_session_t *sq_session_malloc_from_json(json_object *jo_session) {
 
 }
 
-static void session_delete(sq_session_t *sesh) {
+static void session_delete(sq_session_t sesh) {
 
     // frees the sq_session_t struct (but not its sequences, ports, etc)
 

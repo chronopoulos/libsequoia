@@ -21,19 +21,21 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "sequoia.h"
+#include "sequoia/inport.h"
 
 // LOCAL DECLARATIONS
 
 unsigned int smod(int, unsigned int);
-void inport_sanitize_name(sq_inport_t*, const char*);
+void inport_sanitize_name(sq_inport_t, const char*);
 
 // INTERFACE CODE
 
-sq_inport_t *sq_inport_new(const char *name) {
+sq_inport_t sq_inport_new(const char *name) {
 
-    sq_inport_t *inport;
+    sq_inport_t inport;
 
     inport = malloc(sizeof(sq_inport_t));
 
@@ -51,13 +53,13 @@ sq_inport_t *sq_inport_new(const char *name) {
 
 }
 
-void sq_inport_delete(sq_inport_t *inport) {
+void sq_inport_delete(sq_inport_t inport) {
 
     free(inport);
 
 }
 
-void sq_inport_set_name(sq_inport_t *inport, const char *name) {
+void sq_inport_set_name(sq_inport_t inport, const char *name) {
 
     if (inport->jack_client) { // if registered
         jack_port_rename(inport->jack_client, inport->jack_port, name);
@@ -67,13 +69,13 @@ void sq_inport_set_name(sq_inport_t *inport, const char *name) {
 
 }
 
-void sq_inport_set_type(sq_inport_t *inport, enum inport_type type) {
+void sq_inport_set_type(sq_inport_t inport, enum inport_type type) {
 
     inport->type = type;
 
 }
 
-void sq_inport_add_sequence(sq_inport_t *inport, sq_sequence_t *seq) {
+void sq_inport_add_sequence(sq_inport_t inport, sq_sequence_t seq) {
 
     if (inport->nseqs >= INPORT_MAX_NSEQ) {
         fprintf(stderr, "max number of sequences per inport reached: %d\n", INPORT_MAX_NSEQ);
@@ -86,7 +88,7 @@ void sq_inport_add_sequence(sq_inport_t *inport, sq_sequence_t *seq) {
 
 // PUBLIC CODE
 
-void inport_process(sq_inport_t *inport, jack_nframes_t nframes) {
+void inport_process(sq_inport_t inport, jack_nframes_t nframes) {
 
     int iarg;
     bool barg;
@@ -162,7 +164,7 @@ void inport_process(sq_inport_t *inport, jack_nframes_t nframes) {
 
 }
 
-json_object *inport_get_json(sq_inport_t *inport) {
+json_object *inport_get_json(sq_inport_t inport) {
 
     json_object *jo_inport = json_object_new_object();
 
@@ -182,9 +184,9 @@ json_object *inport_get_json(sq_inport_t *inport) {
 
 }
 
-sq_inport_t *inport_malloc_from_json(json_object *jo_inport) {
+sq_inport_t inport_malloc_from_json(json_object *jo_inport) {
 
-    sq_inport_t *inport;
+    sq_inport_t inport;
     const char *name;
     json_object *jo_tmp;
     enum inport_type type;
@@ -213,7 +215,7 @@ unsigned int smod(int a, unsigned int n) {
 
 }
 
-void inport_sanitize_name(sq_inport_t *inport, const char *name) {
+void inport_sanitize_name(sq_inport_t inport, const char *name) {
 
     if (strlen(name) <= INPORT_MAX_NAME_LEN) {
         strcpy(inport->name, name);

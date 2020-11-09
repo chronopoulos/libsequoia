@@ -20,6 +20,7 @@
 */
 
 #include "sequoia.h"
+#include "sequoia/trigger.h"
 
 // INTERFACE CODE
 

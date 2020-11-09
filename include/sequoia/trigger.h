@@ -24,13 +24,11 @@
 
 #include <json-c/json.h>
 
-// INTERFACE
-
 #define TRIG_MAX_LENGTH 16.0
 
 enum trig_type {TRIG_NULL, TRIG_NOTE, TRIG_CC};
 
-typedef struct {
+struct trigger_data {
 
     enum trig_type type;
     int channel;            // [1, 16]
@@ -45,17 +43,7 @@ typedef struct {
 
     float probability;      // [0,1]
 
-} sq_trigger_t;
-
-void sq_trigger_init(sq_trigger_t*);
-void sq_trigger_set_null(sq_trigger_t*);
-void sq_trigger_set_note(sq_trigger_t*, int, int, float);
-void sq_trigger_set_cc(sq_trigger_t*, int, int);
-void sq_trigger_set_probability(sq_trigger_t*, float);
-void sq_trigger_set_microtime(sq_trigger_t*, float);
-void sq_trigger_set_channel(sq_trigger_t*, int);
-
-// PUBLIC
+};
 
 json_object *trigger_get_json(sq_trigger_t*);
 void trigger_from_json(json_object*, sq_trigger_t*);

@@ -26,15 +26,10 @@
 
 #include "sequence.h"
 
-// INTERFACE
-
 #define INPORT_MAX_NAME_LEN 255
 #define INPORT_MAX_NSEQ 16
 
-enum inport_type {INPORT_NONE, INPORT_TRANSPOSE, INPORT_PLAYHEAD, INPORT_CLOCKDIVIDE,
-                    INPORT_DIRECTION, INPORT_MUTE, INPORT_FIRST, INPORT_LAST};
-
-typedef struct {
+struct inport_data {
 
     enum inport_type type;
 
@@ -44,22 +39,14 @@ typedef struct {
     jack_port_t *jack_port;
     void *buf;
 
-    sq_sequence_t *seqs[INPORT_MAX_NSEQ];
+    sq_sequence_t seqs[INPORT_MAX_NSEQ];
     int nseqs;
 
-} sq_inport_t;
+};
 
-sq_inport_t *sq_inport_new(const char*);
-void sq_inport_delete(sq_inport_t*);
-void sq_inport_set_name(sq_inport_t*, const char*);
-void sq_inport_set_type(sq_inport_t*, enum inport_type);
-void sq_inport_add_sequence(sq_inport_t*, sq_sequence_t*);
-
-// PUBLIC
-
-void inport_process(sq_inport_t*, jack_nframes_t);
-json_object *inport_get_json(sq_inport_t*);
-sq_inport_t *inport_malloc_from_json(json_object*);
+void inport_process(sq_inport_t, jack_nframes_t);
+json_object *inport_get_json(sq_inport_t);
+sq_inport_t inport_malloc_from_json(json_object*);
 
 
 #endif

@@ -36,11 +36,11 @@
 #define SESSION_MAX_NINPORTS 16
 #define SESSION_MAX_NOUTPORTS 16
 
-typedef struct {
+struct session_data {
 
     // both audio and UI thread
     float bpm; // beats per minute
-    bool go; sq_sequence_t *seqs[SESSION_MAX_NSEQ];
+    bool go; sq_sequence_t seqs[SESSION_MAX_NSEQ];
     int nseqs;
 
     // UI only
@@ -58,8 +58,8 @@ typedef struct {
     jack_nframes_t frame;
 
     // ports
-    sq_inport_t *inports[SESSION_MAX_NINPORTS];
-    sq_outport_t *outports[SESSION_MAX_NOUTPORTS];
+    sq_inport_t inports[SESSION_MAX_NINPORTS];
+    sq_outport_t outports[SESSION_MAX_NOUTPORTS];
     int ninports, noutports;
 
     // note-off buffer
@@ -68,26 +68,6 @@ typedef struct {
     size_t idx_off;
     offHeap_t *offHeap;
 
-} sq_session_t;
-
-sq_session_t *sq_session_new(const char*);
-int sq_session_register_outport(sq_session_t *, sq_outport_t*);
-int sq_session_register_inport(sq_session_t *, sq_inport_t*);
-void sq_session_start(sq_session_t*);
-void sq_session_stop(sq_session_t*);
-
-sq_sequence_t *sq_session_get_sequence_from_name(sq_session_t*, const char*);
-sq_inport_t *sq_session_get_inport_from_name(sq_session_t*, const char*);
-sq_outport_t *sq_session_get_outport_from_name(sq_session_t*, const char*);
-
-void sq_session_set_bpm(sq_session_t*, float);
-void sq_session_add_sequence(sq_session_t*, sq_sequence_t*);
-void sq_session_rm_sequence(sq_session_t*, sq_sequence_t*);
-char *sq_session_get_name(sq_session_t*);
-float sq_session_get_bpm(sq_session_t*);
-
-void sq_session_save(sq_session_t*, const char*);
-sq_session_t *sq_session_load(const char*);
-void sq_session_teardown(sq_session_t*);
+};
 
 #endif

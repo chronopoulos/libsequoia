@@ -23,12 +23,11 @@
 #define OUTPORT_H
 
 #include <jack/midiport.h>
-
-// INTERFACE
+#include <json-c/json.h> 
 
 #define OUTPORT_MAX_NAME_LEN 255
 
-typedef struct {
+struct outport_data {
 
     char name[OUTPORT_MAX_NAME_LEN + 1];
 
@@ -36,17 +35,9 @@ typedef struct {
     jack_port_t *jack_port;
     void *buf;
 
-} sq_outport_t;
+};
 
-sq_outport_t *sq_outport_new(const char*);
-void sq_outport_delete(sq_outport_t*);
-void sq_outport_set_name(sq_outport_t*, const char*);
-char *sq_outport_get_name(sq_outport_t*);
-
-// PUBLIC
-
-json_object *outport_get_json(sq_outport_t*);
-sq_outport_t *outport_malloc_from_json(json_object*);
-
+json_object *outport_get_json(sq_outport_t);
+sq_outport_t outport_malloc_from_json(json_object*);
 
 #endif

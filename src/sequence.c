@@ -26,6 +26,7 @@
 #include <math.h>
 
 #include "sequoia.h"
+#include "sequoia/sequence.h"
 #include "sequoia/midiEvent.h"
 
 // LOCAL DECLARATIONS
@@ -47,14 +48,15 @@ typedef struct {
 
 } sequence_ctrl_msg_t;
 
-static void sequence_ringbuffer_write(sq_sequence_t*, sequence_ctrl_msg_t*);
-static void sequence_serve_ctrl_msgs(sq_sequence_t*);
+static void sequence_ringbuffer_write(sq_sequence_t, sequence_ctrl_msg_t*);
+static void sequence_serve_ctrl_msgs(sq_sequence_t);
+static void notification_data_init(struct notification_data*);
 
 // INTERFACE CODE
 
-sq_sequence_t *sq_sequence_new(int nsteps) {
+sq_sequence_t sq_sequence_new(int nsteps) {
 
-    sq_sequence_t *seq;
+    sq_sequence_t seq;
 
     if (nsteps > SEQUENCE_MAX_NSTEPS) {
         fprintf(stderr, "nsteps of %d exceeds max of %d\n", nsteps, SEQUENCE_MAX_NSTEPS);
@@ -91,7 +93,7 @@ sq_sequence_t *sq_sequence_new(int nsteps) {
     seq->first = 0;
     seq->last = seq->nsteps - 1;
 
-    sq_sequence_noti_init(&seq->noti);
+    notification_data_init(&seq->noti);
     seq->noti_enable = false;
 
     sequence_reset_now(seq);
@@ -100,37 +102,14 @@ sq_sequence_t *sq_sequence_new(int nsteps) {
 
 }
 
-void sq_sequence_delete(sq_sequence_t *seq) {
+void sq_sequence_delete(sq_sequence_t seq) {
 
     free(seq->trigs);
     free(seq);
 
 }
 
-void sq_sequence_noti_init(sq_sequence_noti_t *noti) {
-
-    noti->playhead_new = false;
-    noti->playhead = 0;
-
-    noti->first_new = false;
-    noti->first = 0;
-
-    noti->last_new = false;
-    noti->last = 0;
-
-    noti->transpose_new = false;
-    noti->transpose = 0;
-
-    noti->clockdivide_new = false;
-    noti->clockdivide = 0;
-
-    noti->mute_new = false;
-    noti->mute = 0;
-
-
-}
-
-void sq_sequence_set_name(sq_sequence_t *seq, const char *name) {
+void sq_sequence_set_name(sq_sequence_t seq, const char *name) {
 
     // this parameter is safe to touch directly (for now)
 
@@ -143,13 +122,13 @@ void sq_sequence_set_name(sq_sequence_t *seq, const char *name) {
 
 }
 
-void sq_sequence_set_outport(sq_sequence_t *seq, sq_outport_t *outport) {
+void sq_sequence_set_outport(sq_sequence_t seq, sq_outport_t outport) {
 
     seq->outport = outport;
 
 }
 
-void sq_sequence_set_trig(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
+void sq_sequence_set_trig(sq_sequence_t seq, int step_index, sq_trigger_t *trig) {
 
     if (seq->is_playing) {
 
@@ -168,7 +147,7 @@ void sq_sequence_set_trig(sq_sequence_t *seq, int step_index, sq_trigger_t *trig
 
 }
 
-void sq_sequence_clear_trig(sq_sequence_t *seq, int step_index) {
+void sq_sequence_clear_trig(sq_sequence_t seq, int step_index) {
 
     if (seq->is_playing) {
 
@@ -186,7 +165,7 @@ void sq_sequence_clear_trig(sq_sequence_t *seq, int step_index) {
 
 }
 
-void sq_sequence_set_transpose(sq_sequence_t *seq, int transpose) {
+void sq_sequence_set_transpose(sq_sequence_t seq, int transpose) {
 
     if (seq->is_playing) {
 
@@ -204,7 +183,7 @@ void sq_sequence_set_transpose(sq_sequence_t *seq, int transpose) {
 
 }
 
-void sq_sequence_set_playhead(sq_sequence_t *seq, int ph) {
+void sq_sequence_set_playhead(sq_sequence_t seq, int ph) {
 
     if (seq->is_playing) {
 
@@ -222,7 +201,7 @@ void sq_sequence_set_playhead(sq_sequence_t *seq, int ph) {
 
 }
 
-void sq_sequence_set_first(sq_sequence_t *seq, int first) {
+void sq_sequence_set_first(sq_sequence_t seq, int first) {
 
     if (seq->is_playing) {
 
@@ -240,7 +219,7 @@ void sq_sequence_set_first(sq_sequence_t *seq, int first) {
 
 }
 
-void sq_sequence_set_last(sq_sequence_t *seq, int last) {
+void sq_sequence_set_last(sq_sequence_t seq, int last) {
 
     if (seq->is_playing) {
 
@@ -258,7 +237,7 @@ void sq_sequence_set_last(sq_sequence_t *seq, int last) {
 
 }
 
-void sq_sequence_set_clockdivide(sq_sequence_t *seq, int div) {
+void sq_sequence_set_clockdivide(sq_sequence_t seq, int div) {
 
     if (seq->is_playing) {
 
@@ -276,7 +255,7 @@ void sq_sequence_set_clockdivide(sq_sequence_t *seq, int div) {
 
 }
 
-void sq_sequence_set_mute(sq_sequence_t *seq, bool mute) {
+void sq_sequence_set_mute(sq_sequence_t seq, bool mute) {
 
     if (seq->is_playing) {
 
@@ -294,7 +273,7 @@ void sq_sequence_set_mute(sq_sequence_t *seq, bool mute) {
 
 }
 
-void sq_sequence_pprint(sq_sequence_t *seq) {
+void sq_sequence_pprint(sq_sequence_t seq) {
 
     if (seq->is_playing) {
 
@@ -340,13 +319,13 @@ void sq_sequence_pprint(sq_sequence_t *seq) {
 
 }
 
-void sq_sequence_set_notifications(sq_sequence_t *seq, bool enable) {
+void sq_sequence_set_notifications(sq_sequence_t seq, bool enable) {
 
     seq->noti_enable = enable;
 
 }
 
-bool sq_sequence_read_new_playhead(sq_sequence_t *seq, int *val) {
+bool sq_sequence_read_new_playhead(sq_sequence_t seq, int *val) {
 
     bool new;
 
@@ -359,7 +338,7 @@ bool sq_sequence_read_new_playhead(sq_sequence_t *seq, int *val) {
 
 }
 
-bool sq_sequence_read_new_first(sq_sequence_t *seq, int *val) {
+bool sq_sequence_read_new_first(sq_sequence_t seq, int *val) {
 
     bool new;
 
@@ -372,7 +351,7 @@ bool sq_sequence_read_new_first(sq_sequence_t *seq, int *val) {
 
 }
 
-bool sq_sequence_read_new_last(sq_sequence_t *seq, int *val) {
+bool sq_sequence_read_new_last(sq_sequence_t seq, int *val) {
 
     bool new;
 
@@ -385,7 +364,7 @@ bool sq_sequence_read_new_last(sq_sequence_t *seq, int *val) {
 
 }
 
-bool sq_sequence_read_new_transpose(sq_sequence_t *seq, int *val) {
+bool sq_sequence_read_new_transpose(sq_sequence_t seq, int *val) {
 
     bool new;
 
@@ -397,7 +376,7 @@ bool sq_sequence_read_new_transpose(sq_sequence_t *seq, int *val) {
     return new;
 }
 
-bool sq_sequence_read_new_clockdivide(sq_sequence_t *seq, int *val) {
+bool sq_sequence_read_new_clockdivide(sq_sequence_t seq, int *val) {
 
     bool new;
 
@@ -409,7 +388,7 @@ bool sq_sequence_read_new_clockdivide(sq_sequence_t *seq, int *val) {
     return new;
 }
 
-bool sq_sequence_read_new_mute(sq_sequence_t *seq, bool *val) {
+bool sq_sequence_read_new_mute(sq_sequence_t seq, bool *val) {
 
     bool new;
 
@@ -423,37 +402,37 @@ bool sq_sequence_read_new_mute(sq_sequence_t *seq, bool *val) {
 
 // read-only getters don't need to use ringbuffers
 
-int sq_sequence_get_nsteps(sq_sequence_t *seq) {
+int sq_sequence_get_nsteps(sq_sequence_t seq) {
 
     return seq->nsteps;
 
 }
 
-bool sq_sequence_get_mute(sq_sequence_t *seq) {
+bool sq_sequence_get_mute(sq_sequence_t seq) {
 
     return seq->mute;
 
 }
 
-int sq_sequence_get_transpose(sq_sequence_t *seq) {
+int sq_sequence_get_transpose(sq_sequence_t seq) {
 
     return seq->transpose;
 
 }
 
-int sq_sequence_get_clockdivide(sq_sequence_t *seq) {
+int sq_sequence_get_clockdivide(sq_sequence_t seq) {
 
     return seq->div;
 
 }
 
-int sq_sequence_get_first(sq_sequence_t *seq) {
+int sq_sequence_get_first(sq_sequence_t seq) {
 
     return seq->first;
 
 }
 
-int sq_sequence_get_last(sq_sequence_t *seq) {
+int sq_sequence_get_last(sq_sequence_t seq) {
 
     return seq->last;
 
@@ -461,7 +440,7 @@ int sq_sequence_get_last(sq_sequence_t *seq) {
 
 // PUBLIC CODE
 
-void sequence_reset_now(sq_sequence_t *seq) {
+void sequence_reset_now(sq_sequence_t seq) {
 
     seq->idiv = 0;
     seq->step = seq->first;
@@ -473,7 +452,7 @@ void sequence_reset_now(sq_sequence_t *seq) {
 
 }
 
-midiEvent sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
+midiEvent sequence_process(sq_sequence_t seq, jack_nframes_t fps,
                         jack_nframes_t start, jack_nframes_t len, jack_nframes_t buf_offset) {
 
     sq_trigger_t *trig;
@@ -522,7 +501,7 @@ midiEvent sequence_process(sq_sequence_t *seq, jack_nframes_t fps,
 
 }
 
-void sequence_step(sq_sequence_t *seq) {
+void sequence_step(sq_sequence_t seq) {
 
     seq->idiv++;
 
@@ -548,7 +527,7 @@ void sequence_step(sq_sequence_t *seq) {
 
 }
 
-json_object *sequence_get_json(sq_sequence_t *seq) {
+json_object *sequence_get_json(sq_sequence_t seq) {
 
     json_object *jo_sequence = json_object_new_object();
 
@@ -590,13 +569,13 @@ json_object *sequence_get_json(sq_sequence_t *seq) {
 
 }
 
-sq_sequence_t *sequence_malloc_from_json(json_object *jo_seq) {
+sq_sequence_t sequence_malloc_from_json(json_object *jo_seq) {
 
     struct json_object *jo_tmp, *jo_trig;
     const char *name;
     int nsteps, transpose, clockdivide, first, last;
     bool mute;
-    sq_sequence_t *seq;
+    sq_sequence_t seq;
     sq_trigger_t trig;
 
     // first extract the top-level attributes
@@ -645,7 +624,7 @@ sq_sequence_t *sequence_malloc_from_json(json_object *jo_seq) {
 
 }
 
-void sequence_set_trig_now(sq_sequence_t *seq, int step_index, sq_trigger_t *trig) {
+void sequence_set_trig_now(sq_sequence_t seq, int step_index, sq_trigger_t *trig) {
 
     if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
         fprintf(stderr, "step index %d out of range\n", step_index);
@@ -656,7 +635,7 @@ void sequence_set_trig_now(sq_sequence_t *seq, int step_index, sq_trigger_t *tri
 
 }
 
-void sequence_clear_trig_now(sq_sequence_t *seq, int step_index) {
+void sequence_clear_trig_now(sq_sequence_t seq, int step_index) {
 
     if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
         fprintf(stderr, "step index %d out of range\n", step_index);
@@ -668,7 +647,7 @@ void sequence_clear_trig_now(sq_sequence_t *seq, int step_index) {
 
 }
 
-void sequence_set_transpose_now(sq_sequence_t *seq, int transpose) {
+void sequence_set_transpose_now(sq_sequence_t seq, int transpose) {
 
     seq->transpose = transpose;
 
@@ -679,7 +658,7 @@ void sequence_set_transpose_now(sq_sequence_t *seq, int transpose) {
 
 }
 
-void sequence_set_playhead_now(sq_sequence_t *seq, int ph) {
+void sequence_set_playhead_now(sq_sequence_t seq, int ph) {
 
     if ( (ph < 0) || (ph >= seq->nsteps) ) {
         fprintf(stderr, "playhead value out of range: %d\n", ph);
@@ -695,7 +674,7 @@ void sequence_set_playhead_now(sq_sequence_t *seq, int ph) {
 
 }
 
-void sequence_set_first_now(sq_sequence_t *seq, int first) {
+void sequence_set_first_now(sq_sequence_t seq, int first) {
 
     if ( (first < 0) || (first >= seq->nsteps) ) {
         fprintf(stderr, "first value out of range: %d\n", first);
@@ -712,7 +691,7 @@ void sequence_set_first_now(sq_sequence_t *seq, int first) {
 
 }
 
-void sequence_set_last_now(sq_sequence_t *seq, int last) {
+void sequence_set_last_now(sq_sequence_t seq, int last) {
 
     if ( (last < 0) || (last >= seq->nsteps) ) {
         fprintf(stderr, "last value out of range: %d\n", last);
@@ -728,7 +707,7 @@ void sequence_set_last_now(sq_sequence_t *seq, int last) {
 
 }
 
-void sequence_set_clockdivide_now(sq_sequence_t *seq, int div) {
+void sequence_set_clockdivide_now(sq_sequence_t seq, int div) {
 
     if (div < 1) {
         fprintf(stderr, "clock divide of %d is out of range (must be >= 1)\n", div);
@@ -745,7 +724,7 @@ void sequence_set_clockdivide_now(sq_sequence_t *seq, int div) {
 
 }
 
-void sequence_set_mute_now(sq_sequence_t *seq, bool mute) {
+void sequence_set_mute_now(sq_sequence_t seq, bool mute) {
 
     seq->mute = mute;
 
@@ -758,7 +737,7 @@ void sequence_set_mute_now(sq_sequence_t *seq, bool mute) {
 
 // STATIC CODE
 
-static void sequence_ringbuffer_write(sq_sequence_t *seq, sequence_ctrl_msg_t *msg) {
+static void sequence_ringbuffer_write(sq_sequence_t seq, sequence_ctrl_msg_t *msg) {
 
     int avail = jack_ringbuffer_write_space(seq->rb);
     if (avail < sizeof(sequence_ctrl_msg_t)) {
@@ -770,7 +749,7 @@ static void sequence_ringbuffer_write(sq_sequence_t *seq, sequence_ctrl_msg_t *m
 
 }
 
-static void sequence_serve_ctrl_msgs(sq_sequence_t *seq) {
+static void sequence_serve_ctrl_msgs(sq_sequence_t seq) {
 
     int avail = jack_ringbuffer_read_space(seq->rb);
     sequence_ctrl_msg_t msg;
@@ -799,6 +778,29 @@ static void sequence_serve_ctrl_msgs(sq_sequence_t *seq) {
         avail -= sizeof(sequence_ctrl_msg_t);
 
     }
+
+}
+
+static void notification_data_init(struct notification_data *noti) {
+
+    noti->playhead_new = false;
+    noti->playhead = 0;
+
+    noti->first_new = false;
+    noti->first = 0;
+
+    noti->last_new = false;
+    noti->last = 0;
+
+    noti->transpose_new = false;
+    noti->transpose = 0;
+
+    noti->clockdivide_new = false;
+    noti->clockdivide = 0;
+
+    noti->mute_new = false;
+    noti->mute = 0;
+
 
 }
 
