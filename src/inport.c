@@ -37,7 +37,7 @@ sq_inport_t sq_inport_new(const char *name) {
 
     sq_inport_t inport;
 
-    inport = malloc(sizeof(sq_inport_t));
+    inport = malloc(sizeof(struct inport_data));
 
     inport->type = INPORT_NONE;
 

@@ -36,7 +36,7 @@ sq_outport_t sq_outport_new(const char *name) {
 
     sq_outport_t outport;
 
-    outport = malloc(sizeof(sq_outport_t));
+    outport = malloc(sizeof(struct outport_data));
 
     outport_sanitize_name(outport, name);
 

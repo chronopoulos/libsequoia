@@ -68,7 +68,7 @@ sq_session_t sq_session_new(const char *client_name) {
 
     sq_session_t sesh;
 
-    sesh = malloc(sizeof(sq_session_t));
+    sesh = malloc(sizeof(struct session_data));
 
     // initialize struct members
     sesh->go = false;

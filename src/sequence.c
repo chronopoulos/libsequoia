@@ -63,7 +63,7 @@ sq_sequence_t sq_sequence_new(int nsteps) {
         exit(1);
     }
 
-    seq = malloc(sizeof(sq_sequence_t));
+    seq = malloc(sizeof(struct sequence_data));
 
     seq->nsteps = nsteps;
     seq->name[0] = '\0';
