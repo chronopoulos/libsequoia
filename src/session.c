@@ -306,7 +306,7 @@ sq_sequence_t sq_session_get_sequence_from_name(sq_session_t sesh, const char *n
 
 }
 
-char *sq_session_get_name(sq_session_t sesh) {
+const char *sq_session_get_name(sq_session_t sesh) {
 
     return jack_get_client_name(sesh->jack_client);
 
@@ -317,6 +317,44 @@ float sq_session_get_bpm(sq_session_t sesh) {
     return sesh->bpm;
 
 }
+
+size_t sq_session_get_nseqs(sq_session_t sesh) {
+
+    return sesh->nseqs;
+
+}
+
+sq_sequence_t sq_session_get_seq(sq_session_t sesh, size_t i) {
+
+    return sesh->seqs[i];
+
+}
+
+size_t sq_session_get_ninports(sq_session_t sesh) {
+
+    return sesh->ninports;
+
+}
+
+sq_inport_t sq_session_get_inport(sq_session_t sesh, size_t i) {
+
+    return sesh->inports[i];
+
+}
+
+size_t sq_session_get_noutports(sq_session_t sesh) {
+
+    return sesh->noutports;
+
+}
+
+sq_outport_t sq_session_get_outport(sq_session_t sesh, size_t i) {
+
+    return sesh->outports[i];
+
+}
+
+////
 
 void sq_session_save(sq_session_t sesh, const char *filename) {
 

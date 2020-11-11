@@ -205,6 +205,19 @@ sq_inport_t inport_malloc_from_json(json_object *jo_inport) {
 
 }
 
+const char *sq_inport_get_name(sq_inport_t inport) {
+
+    return inport->name;
+
+}
+
+enum inport_type sq_inport_get_type(sq_inport_t inport) {
+
+    return inport->type;
+
+}
+
+
 // LOCAL CODE
 
 unsigned int smod(int a, unsigned int n) {

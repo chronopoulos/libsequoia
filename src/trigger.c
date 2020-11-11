@@ -22,6 +22,8 @@
 #include "sequoia.h"
 #include "sequoia/trigger.h"
 
+#include <string.h>
+
 // INTERFACE CODE
 
 sq_trigger_t sq_trigger_new(void) {
@@ -55,26 +57,45 @@ void sq_trigger_delete(sq_trigger_t trig) {
 
 }
 
-void sq_trigger_set_null(sq_trigger_t trig) {
+void sq_trigger_copy(sq_trigger_t dest, sq_trigger_t src) {
 
-    trig->type = TRIG_NULL;
+    memcpy(dest, src, sizeof(struct trigger_data));
 
 }
 
-void sq_trigger_set_note(sq_trigger_t trig, int note, int velocity, float length) {
+void sq_trigger_set_type(sq_trigger_t trig, enum trig_type type) {
 
-    trig->type = TRIG_NOTE;
+    trig->type = type;
+
+}
+
+void sq_trigger_set_note_value(sq_trigger_t trig, int note) {
+
     trig->note = note;
-    trig->velocity = velocity;
-    trig->length = length;
-    if (trig->length > TRIG_MAX_LENGTH) trig->length = TRIG_MAX_LENGTH;
 
 }
 
-void sq_trigger_set_cc(sq_trigger_t trig, int cc_number, int cc_value) {
+void sq_trigger_set_note_velocity(sq_trigger_t trig, int velocity) {
 
-    trig->type = TRIG_CC;
+    trig->velocity = velocity;
+
+}
+
+void sq_trigger_set_note_length(sq_trigger_t trig, float length) {
+
+    if (trig->length > TRIG_MAX_LENGTH) trig->length = TRIG_MAX_LENGTH;
+    trig->length = length;
+
+}
+
+void sq_trigger_set_cc_number(sq_trigger_t trig, int cc_number) {
+
     trig->cc_number = cc_number;
+
+}
+
+void sq_trigger_set_cc_value(sq_trigger_t trig, int cc_value) {
+
     trig->cc_value= cc_value;
 
 }
@@ -118,6 +139,60 @@ void sq_trigger_set_channel(sq_trigger_t trig, int channel) {
   }
 
   trig->channel = channel;
+
+}
+
+enum trig_type  sq_trigger_get_type(sq_trigger_t trig) {
+
+    return trig->type;
+
+}
+
+int sq_trigger_get_note_value(sq_trigger_t trig) {
+
+    return trig->note;
+
+}
+
+int sq_trigger_get_note_velocity(sq_trigger_t trig) {
+
+    return trig->velocity;
+
+}
+
+float sq_trigger_get_note_length(sq_trigger_t trig) {
+
+    return trig->length;
+
+}
+
+int sq_trigger_get_cc_number(sq_trigger_t trig) {
+
+    return trig->cc_number;
+
+}
+
+int sq_trigger_get_cc_value(sq_trigger_t trig) {
+
+    return trig->cc_value;
+
+}
+
+float sq_trigger_get_probability(sq_trigger_t trig) {
+
+    return trig->probability;
+
+}
+
+float sq_trigger_get_microtime(sq_trigger_t trig) {
+
+    return trig->microtime;
+
+}
+
+int sq_trigger_get_channel(sq_trigger_t trig) {
+
+    return trig->channel;
 
 }
 
@@ -216,13 +291,18 @@ sq_trigger_t trigger_malloc_from_json(json_object *jo_trig) {
     trig = sq_trigger_new();
     switch (type) {
         case TRIG_NULL:
-            sq_trigger_set_null(trig);
+            sq_trigger_set_type(trig, TRIG_NULL);
             break;
         case TRIG_NOTE:
-            sq_trigger_set_note(trig, note, velocity, length);
+            sq_trigger_set_type(trig, TRIG_NOTE);
+            sq_trigger_set_note_value(trig, note);
+            sq_trigger_set_note_velocity(trig, velocity);
+            sq_trigger_set_note_length(trig, length);
             break;
         case TRIG_CC:
-            sq_trigger_set_cc(trig, cc_number, cc_value);
+            sq_trigger_set_type(trig, TRIG_CC);
+            sq_trigger_set_cc_number(trig, cc_number);
+            sq_trigger_set_cc_value(trig, cc_value);
             break;
     }
     sq_trigger_set_channel(trig, channel);

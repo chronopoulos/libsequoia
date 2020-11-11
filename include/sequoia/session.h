@@ -38,31 +38,25 @@
 
 struct session_data {
 
-    // both audio and UI thread
     float bpm; // beats per minute
-    bool go; sq_sequence_t seqs[SESSION_MAX_NSEQ];
+    bool go;
+
     int nseqs;
+    sq_sequence_t seqs[SESSION_MAX_NSEQ];
 
-    // UI only
     bool is_playing;
-
-    // constant
     int fps; // frames per step
 
     jack_client_t *jack_client;
     jack_nframes_t sr; // sample rate
     jack_nframes_t bs; // buffer size
     jack_ringbuffer_t *rb;
-
-    // audio only
     jack_nframes_t frame;
 
-    // ports
     sq_inport_t inports[SESSION_MAX_NINPORTS];
     sq_outport_t outports[SESSION_MAX_NOUTPORTS];
-    int ninports, noutports;
+    size_t ninports, noutports;
 
-    // note-off buffer
     offNode_t **buf_off;    // array of pointers
     size_t len_off;
     size_t idx_off;

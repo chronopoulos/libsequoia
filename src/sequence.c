@@ -71,6 +71,7 @@ sq_sequence_t sq_sequence_new(int nsteps) {
 
     seq->div = 1;
 
+    // TODO switch to mallocing dynamically?
     seq->trigs = malloc(seq->nsteps * sizeof(struct trigger_data));
     for (int i=0; i<seq->nsteps; i++) {
         trigger_init(seq->trigs + i);
@@ -402,9 +403,21 @@ bool sq_sequence_read_new_mute(sq_sequence_t seq, bool *val) {
 
 // read-only getters don't need to use ringbuffers
 
+const char *sq_sequence_get_name(sq_sequence_t seq) {
+
+    return seq->name;
+
+}
+
 int sq_sequence_get_nsteps(sq_sequence_t seq) {
 
     return seq->nsteps;
+
+}
+
+sq_trigger_t sq_sequence_get_trig(sq_sequence_t seq, size_t index) {
+
+    return seq->trigs + index;
 
 }
 
