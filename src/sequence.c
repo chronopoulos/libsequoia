@@ -403,6 +403,12 @@ bool sq_sequence_read_new_mute(sq_sequence_t seq, bool *val) {
 
 // read-only getters don't need to use ringbuffers
 
+int sq_sequence_get_playhead(sq_sequence_t seq) {
+
+    return seq->step;
+
+}
+
 const char *sq_sequence_get_name(sq_sequence_t seq) {
 
     return seq->name;

@@ -78,26 +78,30 @@ sq_outport_t    sq_session_get_outport_from_name(sq_session_t, const char*);
 
 sq_sequence_t   sq_sequence_new(int);
 void            sq_sequence_delete(sq_sequence_t);
-void            sq_sequence_set_name(sq_sequence_t, const char*);
+void            sq_sequence_pprint(sq_sequence_t);
+////
+sq_outport_t    sq_sequence_get_outport(sq_sequence_t);
 void            sq_sequence_set_outport(sq_sequence_t, sq_outport_t);
+sq_trigger_t    sq_sequence_get_trig(sq_sequence_t, size_t);
 void            sq_sequence_set_trig(sq_sequence_t, int, sq_trigger_t);
 void            sq_sequence_clear_trig(sq_sequence_t, int);
-void            sq_sequence_set_transpose(sq_sequence_t, int);
-void            sq_sequence_set_playhead(sq_sequence_t, int);
-void            sq_sequence_set_first(sq_sequence_t, int);
-void            sq_sequence_set_last(sq_sequence_t, int);
-void            sq_sequence_set_clockdivide(sq_sequence_t, int);
-void            sq_sequence_set_mute(sq_sequence_t, bool);
-void            sq_sequence_pprint(sq_sequence_t);
+////
 const char*     sq_sequence_get_name(sq_sequence_t);
-sq_outport_t    sq_sequence_get_outport(sq_sequence_t);
-int             sq_sequence_get_nsteps(sq_sequence_t);
-sq_trigger_t    sq_sequence_get_trig(sq_sequence_t, size_t);
-bool            sq_sequence_get_mute(sq_sequence_t);
+void            sq_sequence_set_name(sq_sequence_t, const char*);
 int             sq_sequence_get_transpose(sq_sequence_t);
-int             sq_sequence_get_clockdivide(sq_sequence_t);
+void            sq_sequence_set_transpose(sq_sequence_t, int);
+int             sq_sequence_get_playhead(sq_sequence_t);
+void            sq_sequence_set_playhead(sq_sequence_t, int);
 int             sq_sequence_get_first(sq_sequence_t);
+void            sq_sequence_set_first(sq_sequence_t, int);
 int             sq_sequence_get_last(sq_sequence_t);
+void            sq_sequence_set_last(sq_sequence_t, int);
+int             sq_sequence_get_clockdivide(sq_sequence_t);
+void            sq_sequence_set_clockdivide(sq_sequence_t, int);
+bool            sq_sequence_get_mute(sq_sequence_t);
+void            sq_sequence_set_mute(sq_sequence_t, bool);
+int             sq_sequence_get_nsteps(sq_sequence_t);
+////
 void            sq_sequence_set_notifications(sq_sequence_t, bool);
 bool            sq_sequence_read_new_playhead(sq_sequence_t, int*);
 bool            sq_sequence_read_new_first(sq_sequence_t, int*);
