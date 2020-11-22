@@ -33,9 +33,9 @@ struct trigger_data {
     float microtime;        // [-0.5, 0.5) in units of step
     float probability;      // [0,1]
 
-    int note;               // [0, 127]
-    int velocity;           // [0, 127]
-    float length;           // [0, nsteps) in units of step
+    int note_value;         // [0, 127]
+    int note_velocity;      // [0, 127]
+    float note_length;      // [0, nsteps) in units of step
 
     int cc_number;          // [0, 119]
     int cc_value;           // [0, 127]

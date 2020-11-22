@@ -297,7 +297,7 @@ void sq_sequence_pprint(sq_sequence_t seq) {
                 charCount += 5;
                 newLineLast = false;
             } else if (seq->trigs[step].type == TRIG_NOTE) {
-                printf("N%03d|", seq->trigs[step].note);
+                printf("N%03d|", seq->trigs[step].note_value);
                 charCount += 5;
                 newLineLast = false;
             } else if (seq->trigs[step].type == TRIG_CC) {
@@ -493,9 +493,9 @@ midiEvent sequence_process(sq_sequence_t seq, jack_nframes_t fps,
                     if (trig->type == TRIG_NOTE) {
                         mev.type = MEV_TYPE_NOTEON;
                         mev.status = 143 + trig->channel;   // note on
-                        mev.data1 = trig->note + seq->transpose;
-                        mev.data2 = trig->velocity;
-                        mev.length = trig->length * fps;
+                        mev.data1 = trig->note_value + seq->transpose;
+                        mev.data2 = trig->note_velocity;
+                        mev.length = trig->note_length * fps;
                     } else if (trig->type == TRIG_CC) {
                         mev.type = MEV_TYPE_CC;
                         mev.status = 175 + trig->channel;   // control change

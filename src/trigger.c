@@ -38,9 +38,9 @@ sq_trigger_t sq_trigger_new(void) {
     trig->channel = 1;
     trig->microtime = 0.;
 
-    trig->note = 60;
-    trig->velocity = 100;
-    trig->length = 0.5;
+    trig->note_value = 60;
+    trig->note_velocity = 100;
+    trig->note_length = 0.5;
 
     trig->cc_number = 0;
     trig->cc_value = 0;
@@ -69,22 +69,22 @@ void sq_trigger_set_type(sq_trigger_t trig, enum trig_type type) {
 
 }
 
-void sq_trigger_set_note_value(sq_trigger_t trig, int note) {
+void sq_trigger_set_note_value(sq_trigger_t trig, int value) {
 
-    trig->note = note;
+    trig->note_value = value;
 
 }
 
 void sq_trigger_set_note_velocity(sq_trigger_t trig, int velocity) {
 
-    trig->velocity = velocity;
+    trig->note_velocity = velocity;
 
 }
 
 void sq_trigger_set_note_length(sq_trigger_t trig, float length) {
 
-    if (trig->length > TRIG_MAX_LENGTH) trig->length = TRIG_MAX_LENGTH;
-    trig->length = length;
+    if (trig->note_length > TRIG_MAX_LENGTH) trig->note_length = TRIG_MAX_LENGTH;
+    trig->note_length = length;
 
 }
 
@@ -150,19 +150,19 @@ enum trig_type  sq_trigger_get_type(sq_trigger_t trig) {
 
 int sq_trigger_get_note_value(sq_trigger_t trig) {
 
-    return trig->note;
+    return trig->note_value;
 
 }
 
 int sq_trigger_get_note_velocity(sq_trigger_t trig) {
 
-    return trig->velocity;
+    return trig->note_velocity;
 
 }
 
 float sq_trigger_get_note_length(sq_trigger_t trig) {
 
-    return trig->length;
+    return trig->note_length;
 
 }
 
@@ -204,9 +204,9 @@ void trigger_init(sq_trigger_t trig) {
     trig->channel = 1;
     trig->microtime = 0.;
 
-    trig->note = 60;
-    trig->velocity = 100;
-    trig->length = 0.5;
+    trig->note_value = 60;
+    trig->note_velocity = 100;
+    trig->note_length = 0.5;
 
     trig->cc_number = 0;
     trig->cc_value = 0;
@@ -229,13 +229,13 @@ json_object *trigger_get_json(sq_trigger_t trig) {
                             json_object_new_double(trig->microtime));
 
     json_object_object_add(jo_trigger, "note",
-                            json_object_new_int(trig->note));
+                            json_object_new_int(trig->note_value));
 
     json_object_object_add(jo_trigger, "velocity",
-                            json_object_new_int(trig->velocity));
+                            json_object_new_int(trig->note_velocity));
 
     json_object_object_add(jo_trigger, "length",
-                            json_object_new_double(trig->length));
+                            json_object_new_double(trig->note_length));
 
     json_object_object_add(jo_trigger, "cc_number",
                             json_object_new_int(trig->cc_number));
@@ -253,8 +253,8 @@ json_object *trigger_get_json(sq_trigger_t trig) {
 sq_trigger_t trigger_malloc_from_json(json_object *jo_trig) {
 
     struct json_object *jo_tmp;
-    int type, channel, note, velocity, cc_number, cc_value;
-    float microtime, length, probability;
+    int type, channel, note_value, note_velocity, cc_number, cc_value;
+    float microtime, note_length, probability;
     sq_trigger_t trig;
 
     // first extract the attributes
@@ -269,13 +269,13 @@ sq_trigger_t trigger_malloc_from_json(json_object *jo_trig) {
     microtime = json_object_get_double(jo_tmp);
 
     json_object_object_get_ex(jo_trig, "note", &jo_tmp);
-    note = json_object_get_int(jo_tmp);
+    note_value = json_object_get_int(jo_tmp);
 
     json_object_object_get_ex(jo_trig, "velocity", &jo_tmp);
-    velocity = json_object_get_int(jo_tmp);
+    note_velocity = json_object_get_int(jo_tmp);
 
     json_object_object_get_ex(jo_trig, "length", &jo_tmp);
-    length = json_object_get_double(jo_tmp);
+    note_length = json_object_get_double(jo_tmp);
 
     json_object_object_get_ex(jo_trig, "cc_number", &jo_tmp);
     cc_number = json_object_get_int(jo_tmp);
@@ -295,9 +295,9 @@ sq_trigger_t trigger_malloc_from_json(json_object *jo_trig) {
             break;
         case TRIG_NOTE:
             sq_trigger_set_type(trig, TRIG_NOTE);
-            sq_trigger_set_note_value(trig, note);
-            sq_trigger_set_note_velocity(trig, velocity);
-            sq_trigger_set_note_length(trig, length);
+            sq_trigger_set_note_value(trig, note_value);
+            sq_trigger_set_note_velocity(trig, note_velocity);
+            sq_trigger_set_note_length(trig, note_length);
             break;
         case TRIG_CC:
             sq_trigger_set_type(trig, TRIG_CC);
