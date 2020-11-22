@@ -60,8 +60,8 @@ static void session_disconnect_jack(sq_session_t);
 static void session_set_bpm_now(sq_session_t, float);
 static void session_add_sequence_now(sq_session_t, sq_sequence_t);
 static void session_rm_sequence_now(sq_session_t, sq_sequence_t);
-static json_object *sq_session_get_json(sq_session_t);
-static sq_session_t sq_session_malloc_from_json(json_object*);
+static json_object *session_get_json(sq_session_t);
+static sq_session_t session_malloc_from_json(json_object*);
 static void session_delete(sq_session_t);
 
 sq_session_t sq_session_new(const char *client_name) {
@@ -361,7 +361,7 @@ void sq_session_save(sq_session_t sesh, const char *filename) {
     FILE *fp;
 
     fp = fopen(filename, "w+");
-    fprintf(fp, "%s", json_object_to_json_string_ext(sq_session_get_json(sesh),
+    fprintf(fp, "%s", json_object_to_json_string_ext(session_get_json(sesh),
                                                     JSON_C_TO_STRING_PRETTY));
     fclose(fp);
 
@@ -391,7 +391,7 @@ sq_session_t sq_session_load(const char *filename) {
     ret = fread(buf, 1, filesize, fp);
     if (ret == filesize) {
         jo_session = json_tokener_parse(buf);
-        sesh = sq_session_malloc_from_json(jo_session);
+        sesh = session_malloc_from_json(jo_session);
     } else {
         fprintf(stderr, "error while reading file: %s", filename);
     }
@@ -654,7 +654,7 @@ static void session_rm_sequence_now(sq_session_t sesh, sq_sequence_t seq) {
 
 }
 
-static json_object *sq_session_get_json(sq_session_t sesh) {
+static json_object *session_get_json(sq_session_t sesh) {
 
     json_object *jo_session = json_object_new_object();
 
@@ -690,7 +690,7 @@ static json_object *sq_session_get_json(sq_session_t sesh) {
 
 }
 
-static sq_session_t sq_session_malloc_from_json(json_object *jo_session) {
+static sq_session_t session_malloc_from_json(json_object *jo_session) {
 
     struct json_object *jo_tmp, *jo_tmp2, *jo_tmp3, *jo_tmp4;
     const char *name;
