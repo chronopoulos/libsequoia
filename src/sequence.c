@@ -409,6 +409,12 @@ const char *sq_sequence_get_name(sq_sequence_t seq) {
 
 }
 
+sq_outport_t sq_sequence_get_outport(sq_sequence_t seq) {
+
+    return seq->outport;
+
+}
+
 int sq_sequence_get_nsteps(sq_sequence_t seq) {
 
     return seq->nsteps;

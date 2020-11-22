@@ -90,6 +90,7 @@ void            sq_sequence_set_clockdivide(sq_sequence_t, int);
 void            sq_sequence_set_mute(sq_sequence_t, bool);
 void            sq_sequence_pprint(sq_sequence_t);
 const char*     sq_sequence_get_name(sq_sequence_t);
+sq_outport_t    sq_sequence_get_outport(sq_sequence_t);
 int             sq_sequence_get_nsteps(sq_sequence_t);
 sq_trigger_t    sq_sequence_get_trig(sq_sequence_t, size_t);
 bool            sq_sequence_get_mute(sq_sequence_t);
