@@ -53,6 +53,8 @@ enum trig_type {TRIG_NULL, TRIG_NOTE, TRIG_CC};
 ///////////////////////////////
 
 sq_session_t    sq_session_new(const char*);
+void            sq_session_delete(sq_session_t);
+void            sq_session_delete_recursive(sq_session_t);
 int             sq_session_register_outport(sq_session_t, sq_outport_t);
 int             sq_session_register_inport(sq_session_t, sq_inport_t);
 void            sq_session_add_sequence(sq_session_t, sq_sequence_t);
@@ -70,13 +72,12 @@ size_t          sq_session_get_noutports(sq_session_t);
 sq_outport_t    sq_session_get_outport(sq_session_t, size_t);
 void            sq_session_save(sq_session_t, const char*);
 sq_session_t    sq_session_load(const char*);
-void            sq_session_teardown(sq_session_t);
 sq_sequence_t   sq_session_get_sequence_from_name(sq_session_t, const char*);
 sq_inport_t     sq_session_get_inport_from_name(sq_session_t, const char*);
 sq_outport_t    sq_session_get_outport_from_name(sq_session_t, const char*);
 
 sq_sequence_t   sq_sequence_new(int);
-void            sq_sequence_delete(sq_sequence_t seq);
+void            sq_sequence_delete(sq_sequence_t);
 void            sq_sequence_set_name(sq_sequence_t, const char*);
 void            sq_sequence_set_outport(sq_sequence_t, sq_outport_t);
 void            sq_sequence_set_trig(sq_sequence_t, int, sq_trigger_t);

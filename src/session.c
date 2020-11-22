@@ -62,7 +62,6 @@ static void session_add_sequence_now(sq_session_t, sq_sequence_t);
 static void session_rm_sequence_now(sq_session_t, sq_sequence_t);
 static json_object *session_get_json(sq_session_t);
 static sq_session_t session_malloc_from_json(json_object*);
-static void session_delete(sq_session_t);
 
 sq_session_t sq_session_new(const char *client_name) {
 
@@ -122,6 +121,16 @@ sq_session_t sq_session_new(const char *client_name) {
 	}
 
     return sesh;
+
+}
+
+void sq_session_delete(sq_session_t sesh) {
+
+    // frees the sq_session_t struct (but not its sequences, ports, etc)
+
+    offHeap_delete(sesh->offHeap);
+    free(sesh->buf_off);
+    free(sesh);
 
 }
 
@@ -404,7 +413,7 @@ sq_session_t sq_session_load(const char *filename) {
 
 }
 
-void sq_session_teardown(sq_session_t sesh) {
+void sq_session_delete_recursive(sq_session_t sesh) {
 
     // recursively frees all the malloc'd memory attributed to the session
 
@@ -427,7 +436,7 @@ void sq_session_teardown(sq_session_t sesh) {
     }
 
     // session
-    session_delete(sesh);
+    sq_session_delete(sesh);
 
 }
 
@@ -754,16 +763,6 @@ static sq_session_t session_malloc_from_json(json_object *jo_session) {
     }
 
     return sesh;
-
-}
-
-static void session_delete(sq_session_t sesh) {
-
-    // frees the sq_session_t struct (but not its sequences, ports, etc)
-
-    offHeap_delete(sesh->offHeap);
-    free(sesh->buf_off);
-    free(sesh);
 
 }
 
