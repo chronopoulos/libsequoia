@@ -62,6 +62,8 @@ static void session_add_sequence_now(sq_session_t, sq_sequence_t);
 static void session_rm_sequence_now(sq_session_t, sq_sequence_t);
 static json_object *session_get_json(sq_session_t);
 static sq_session_t session_malloc_from_json(json_object*);
+static sq_sequence_t session_get_sequence_from_name(sq_session_t, const char*);
+static sq_outport_t session_get_outport_from_name(sq_session_t, const char*);
 
 sq_session_t sq_session_new(const char *client_name) {
 
@@ -161,18 +163,6 @@ int sq_session_register_outport(sq_session_t sesh, sq_outport_t outport) {
 
 }
 
-sq_outport_t sq_session_get_outport_from_name(sq_session_t sesh, const char *name) {
-
-    for (int i=0; i<sesh->noutports; i++) {
-        if (strcmp(sesh->outports[i]->name, name) == 0) {
-            return sesh->outports[i];
-        }
-    }
-
-    return NULL;
-
-}
-
 int sq_session_register_inport(sq_session_t sesh, sq_inport_t inport) {
 
     jack_port_t *jack_port;
@@ -197,18 +187,6 @@ int sq_session_register_inport(sq_session_t sesh, sq_inport_t inport) {
     sesh->ninports++;
 
     return 0;
-
-}
-
-sq_inport_t sq_session_get_inport_from_name(sq_session_t sesh, const char *name) {
-
-    for (int i=0; i<sesh->ninports; i++) {
-        if (strcmp(sesh->inports[i]->name, name) == 0) {
-            return sesh->inports[i];
-        }
-    }
-
-    return NULL;
 
 }
 
@@ -302,18 +280,6 @@ void sq_session_rm_sequence(sq_session_t sesh, sq_sequence_t seq) {
 }
 
 // read-only getters don't need to use ringbuffers
-
-sq_sequence_t sq_session_get_sequence_from_name(sq_session_t sesh, const char *name) {
-
-    for (int i=0; i<sesh->nseqs; i++) {
-        if (strcmp(sesh->seqs[i]->name, name) == 0) {
-            return sesh->seqs[i];
-        }
-    }
-
-    return NULL;
-
-}
 
 const char *sq_session_get_name(sq_session_t sesh) {
 
@@ -441,6 +407,30 @@ void sq_session_delete_recursive(sq_session_t sesh) {
 }
 
 // LOCAL CODE
+
+static sq_sequence_t session_get_sequence_from_name(sq_session_t sesh, const char *name) {
+
+    for (int i=0; i<sesh->nseqs; i++) {
+        if (strcmp(sesh->seqs[i]->name, name) == 0) {
+            return sesh->seqs[i];
+        }
+    }
+
+    return NULL;
+
+}
+
+static sq_outport_t session_get_outport_from_name(sq_session_t sesh, const char *name) {
+
+    for (int i=0; i<sesh->noutports; i++) {
+        if (strcmp(sesh->outports[i]->name, name) == 0) {
+            return sesh->outports[i];
+        }
+    }
+
+    return NULL;
+
+}
 
 static inline jack_nframes_t min_nframes(jack_nframes_t a, jack_nframes_t b ) {
 
@@ -736,7 +726,7 @@ static sq_session_t session_malloc_from_json(json_object *jo_session) {
         json_object_object_get_ex(jo_tmp2, "outport", &jo_tmp3);
         if (json_object_get_type(jo_tmp3) == json_type_string) {
             name = json_object_get_string(jo_tmp3);
-            outport_tmp = sq_session_get_outport_from_name(sesh, name);
+            outport_tmp = session_get_outport_from_name(sesh, name);
             if (outport_tmp) {
                 sq_sequence_set_outport(seq_tmp, outport_tmp);
             }
@@ -754,7 +744,7 @@ static sq_session_t session_malloc_from_json(json_object *jo_session) {
         for (int j=0; j<json_object_array_length(jo_tmp3); j++) {
             jo_tmp4 = json_object_array_get_idx(jo_tmp3, i);
             name = json_object_get_string(jo_tmp4);
-            seq_tmp = sq_session_get_sequence_from_name(sesh, name);
+            seq_tmp = session_get_sequence_from_name(sesh, name);
             if (seq_tmp) {
                 sq_inport_add_sequence(inport_tmp, seq_tmp);
             }

@@ -72,9 +72,6 @@ size_t          sq_session_get_noutports(sq_session_t);
 sq_outport_t    sq_session_get_outport(sq_session_t, size_t);
 void            sq_session_save(sq_session_t, const char*);
 sq_session_t    sq_session_load(const char*);
-sq_sequence_t   sq_session_get_sequence_from_name(sq_session_t, const char*);
-sq_inport_t     sq_session_get_inport_from_name(sq_session_t, const char*);
-sq_outport_t    sq_session_get_outport_from_name(sq_session_t, const char*);
 
 sq_sequence_t   sq_sequence_new(int);
 void            sq_sequence_delete(sq_sequence_t);
