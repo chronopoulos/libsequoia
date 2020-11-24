@@ -223,6 +223,12 @@ void sq_sequence_set_motion(sq_sequence_t seq, enum motion_type motion) {
 
 }
 
+enum motion_type sq_sequence_get_motion(sq_sequence_t seq) {
+
+    return seq->motion;
+
+}
+
 void sq_sequence_set_first(sq_sequence_t seq, int first) {
 
     if (seq->is_playing) {

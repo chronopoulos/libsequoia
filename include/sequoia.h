@@ -100,6 +100,8 @@ void            sq_sequence_set_clockdivide(sq_sequence_t, int);
 bool            sq_sequence_get_mute(sq_sequence_t);
 void            sq_sequence_set_mute(sq_sequence_t, bool);
 int             sq_sequence_get_nsteps(sq_sequence_t);
+void            sq_sequence_set_motion(sq_sequence_t, enum motion_type);
+enum motion_type sq_sequence_get_motion(sq_sequence_t);
 ////
 void            sq_sequence_set_notifications(sq_sequence_t, bool);
 bool            sq_sequence_read_new_playhead(sq_sequence_t, int*);
