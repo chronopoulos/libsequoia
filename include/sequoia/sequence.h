@@ -58,6 +58,9 @@ struct notification_data {
     bool mute_new;
     bool mute;
 
+    bool motion_new;
+    bool motion;
+
 };
 
 struct sequence_data {
@@ -75,6 +78,8 @@ struct sequence_data {
     int first, last;
     struct notification_data noti;
     bool noti_enable;
+    enum motion_type motion;
+    bool bounce_forward;
 
 };
 
@@ -95,5 +100,6 @@ void sequence_set_first_now(sq_sequence_t, int);
 void sequence_set_last_now(sq_sequence_t, int);
 void sequence_set_clockdivide_now(sq_sequence_t, int);
 void sequence_set_mute_now(sq_sequence_t, bool);
+void sequence_set_motion_now(sq_sequence_t, enum motion_type);
 
 #endif

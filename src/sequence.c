@@ -34,7 +34,7 @@
 #define SEQUENCE_RB_LENGTH 16
 
 enum sequence_param {SEQUENCE_SET_TRIG, SEQUENCE_CLEAR_TRIG, SEQUENCE_TRANSPOSE, SEQUENCE_PH,
-                        SEQUENCE_DIV, SEQUENCE_MUTE, SEQUENCE_FIRST, SEQUENCE_LAST};
+                        SEQUENCE_DIV, SEQUENCE_MUTE, SEQUENCE_FIRST, SEQUENCE_LAST, SEQUENCE_MOTION};
 
 typedef struct {
 
@@ -93,6 +93,9 @@ sq_sequence_t sq_sequence_new(int nsteps) {
 
     seq->first = 0;
     seq->last = seq->nsteps - 1;
+
+    seq->motion = MOTION_FORWARD;
+    seq->bounce_forward = true;
 
     notification_data_init(&seq->noti);
     seq->noti_enable = false;
@@ -197,6 +200,24 @@ void sq_sequence_set_playhead(sq_sequence_t seq, int ph) {
     } else {
 
         sequence_set_playhead_now(seq, ph);
+
+    }
+
+}
+
+void sq_sequence_set_motion(sq_sequence_t seq, enum motion_type motion) {
+
+    if (seq->is_playing) {
+
+        sequence_ctrl_msg_t msg;
+        msg.param = SEQUENCE_MOTION;
+        msg.vi = motion;
+
+        sequence_ringbuffer_write(seq, &msg);
+
+    } else {
+
+        sequence_set_motion_now(seq, motion);
 
     }
 
@@ -533,10 +554,46 @@ void sequence_step(sq_sequence_t seq) {
     if (seq->idiv == seq->div) {
 
         // increment
-        if (seq->step == seq->last) {
-            seq->step = seq->first;
-        } else if (++(seq->step) == seq->nsteps) {
-            seq->step = 0;
+        if (seq->motion == MOTION_FORWARD) {
+
+            if (seq->step == seq->last) {
+                seq->step = seq->first;
+            } else if (++(seq->step) == seq->nsteps) {
+                seq->step = 0;
+            }
+
+        } else if (seq->motion == MOTION_BACKWARD) {
+
+            if (seq->step == seq->first) {
+                seq->step = seq->last;
+            } else if (--(seq->step) == -1) {
+                seq->step = seq->nsteps - 1;
+            }
+
+        } else if (seq->motion == MOTION_BOUNCE) {
+
+            if (seq->step == seq->last) {
+                seq->step--;
+                seq->bounce_forward = false;
+            } else if (seq->step == seq->first) {
+                seq->step++;
+                seq->bounce_forward = true;
+            } else {
+                if (seq->bounce_forward) {
+                    if (seq->step == (seq->nsteps-1)) {
+                        seq->step = 0;
+                    } else {
+                        seq->step++;
+                    }
+                } else {
+                    if (seq->step == 0) {
+                        seq->step = seq->nsteps - 1;
+                    } else {
+                        seq->step--;
+                    }
+                }
+            }
+
         }
 
         // and send a notification
@@ -760,6 +817,17 @@ void sequence_set_mute_now(sq_sequence_t seq, bool mute) {
 
 }
 
+void sequence_set_motion_now(sq_sequence_t seq, enum motion_type motion) {
+
+    seq->motion = motion;
+
+    if (seq->noti_enable) {
+        seq->noti.motion = motion;
+        seq->noti.motion_new = true;
+    }
+
+}
+
 // STATIC CODE
 
 static void sequence_ringbuffer_write(sq_sequence_t seq, sequence_ctrl_msg_t *msg) {
@@ -798,6 +866,8 @@ static void sequence_serve_ctrl_msgs(sq_sequence_t seq) {
             sequence_set_clockdivide_now(seq, msg.vi);
         } else if (msg.param == SEQUENCE_MUTE) {
             sequence_set_mute_now(seq, msg.vb);
+        } else if (msg.param == SEQUENCE_MOTION) {
+            sequence_set_motion_now(seq, msg.vi);
         }
 
         avail -= sizeof(sequence_ctrl_msg_t);
@@ -826,6 +896,8 @@ static void notification_data_init(struct notification_data *noti) {
     noti->mute_new = false;
     noti->mute = 0;
 
+    noti->motion_new = false;
+    noti->motion = MOTION_FORWARD;
 
 }
 

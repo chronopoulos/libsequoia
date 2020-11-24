@@ -43,6 +43,8 @@ typedef struct outport_data * sq_outport_t;
 // enums
 ///////////////////////////////
 
+enum motion_type {MOTION_FORWARD, MOTION_BACKWARD, MOTION_BOUNCE};
+
 enum inport_type {INPORT_NONE, INPORT_TRANSPOSE, INPORT_PLAYHEAD, INPORT_CLOCKDIVIDE,
                     INPORT_DIRECTION, INPORT_MUTE, INPORT_FIRST, INPORT_LAST};
 
