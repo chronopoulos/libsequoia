@@ -110,6 +110,7 @@ bool            sq_sequence_read_new_last(sq_sequence_t, int*);
 bool            sq_sequence_read_new_transpose(sq_sequence_t, int*);
 bool            sq_sequence_read_new_clockdivide(sq_sequence_t, int*);
 bool            sq_sequence_read_new_mute(sq_sequence_t, bool*);
+bool            sq_sequence_read_new_motion(sq_sequence_t, int*);
 
 sq_trigger_t    sq_trigger_new(void);
 void            sq_trigger_delete(sq_trigger_t);

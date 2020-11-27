@@ -428,6 +428,18 @@ bool sq_sequence_read_new_mute(sq_sequence_t seq, bool *val) {
     return new;
 }
 
+bool sq_sequence_read_new_motion(sq_sequence_t seq, int *val) {
+
+    bool new;
+
+    if ((new = seq->noti.motion_new)) {
+        *val = seq->noti.motion;
+        seq->noti.motion_new = false;
+    }
+
+    return new;
+}
+
 // read-only getters don't need to use ringbuffers
 
 int sq_sequence_get_playhead(sq_sequence_t seq) {
