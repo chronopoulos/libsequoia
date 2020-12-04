@@ -652,6 +652,12 @@ json_object *sequence_get_json(sq_sequence_t seq) {
     json_object_object_add(jo_sequence, "last",
                             json_object_new_int(sq_sequence_get_last(seq)));
 
+    json_object_object_add(jo_sequence, "last",
+                            json_object_new_int(sq_sequence_get_last(seq)));
+
+    json_object_object_add(jo_sequence, "motion",
+                            json_object_new_int(sq_sequence_get_motion(seq)));
+
     json_object *trigger_array = json_object_new_array();
     for (int i=0; i<seq->nsteps; i++) {
         json_object_array_add(trigger_array, trigger_get_json(seq->trigs + i));
@@ -675,6 +681,7 @@ sq_sequence_t sequence_malloc_from_json(json_object *jo_seq) {
     const char *name;
     int nsteps, transpose, clockdivide, first, last;
     bool mute;
+    enum motion_type motion;
     sq_sequence_t seq;
     sq_trigger_t trig;
 
@@ -701,6 +708,9 @@ sq_sequence_t sequence_malloc_from_json(json_object *jo_seq) {
     json_object_object_get_ex(jo_seq, "last", &jo_tmp);
     last = json_object_get_int(jo_tmp);
 
+    json_object_object_get_ex(jo_seq, "motion", &jo_tmp);
+    motion = json_object_get_int(jo_tmp);
+
     // malloc and init the sequence
 
     seq = sq_sequence_new(nsteps);
@@ -710,6 +720,7 @@ sq_sequence_t sequence_malloc_from_json(json_object *jo_seq) {
     sq_sequence_set_clockdivide(seq, clockdivide);
     sq_sequence_set_first(seq, first);
     sq_sequence_set_last(seq, last);
+    sq_sequence_set_motion(seq, motion);
 
     // then set the triggers
     json_object_object_get_ex(jo_seq, "triggers", &jo_tmp);
