@@ -34,7 +34,8 @@
 #define SEQUENCE_RB_LENGTH 16
 
 enum sequence_param {SEQUENCE_SET_TRIG, SEQUENCE_CLEAR_TRIG, SEQUENCE_TRANSPOSE, SEQUENCE_PH,
-                        SEQUENCE_DIV, SEQUENCE_MUTE, SEQUENCE_FIRST, SEQUENCE_LAST, SEQUENCE_MOTION};
+                        SEQUENCE_DIV, SEQUENCE_MUTE, SEQUENCE_FIRST, SEQUENCE_LAST, SEQUENCE_MOTION,
+                        SEQUENCE_GET_TRIG};
 
 typedef struct {
 
@@ -45,6 +46,8 @@ typedef struct {
     float vf;
     bool vb;
     sq_trigger_t vp;
+
+    bool *donep;
 
 } sequence_ctrl_msg_t;
 
@@ -132,38 +135,79 @@ void sq_sequence_set_outport(sq_sequence_t seq, sq_outport_t outport) {
 
 }
 
-void sq_sequence_set_trig(sq_sequence_t seq, int step_index, sq_trigger_t trig) {
+void sq_sequence_set_trig(sq_sequence_t seq, int step, sq_trigger_t trig) {
 
     if (seq->is_playing) {
 
         sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_SET_TRIG;
-        msg.vi = step_index;
+        msg.vi = step;
         msg.vp = trig;
+
+        bool done = false;
+        msg.donep = &done;
 
         sequence_ringbuffer_write(seq, &msg);
 
+        while (!done) {
+            usleep(1000);
+        }
+
     } else {
 
-        sequence_set_trig_now(seq, step_index, trig);
+        sequence_set_trig_now(seq, step, trig);
 
     }
 
 }
 
-void sq_sequence_clear_trig(sq_sequence_t seq, int step_index) {
+void sq_sequence_get_trig(sq_sequence_t seq, size_t step, sq_trigger_t trig) {
+
+    if (seq->is_playing) {
+
+        sequence_ctrl_msg_t msg;
+        msg.param = SEQUENCE_GET_TRIG;
+        msg.vi = step;
+        msg.vp = trig;
+
+        bool done = false;
+        msg.donep = &done;
+
+        sequence_ringbuffer_write(seq, &msg);
+
+        while (!done) {
+            usleep(1000);
+        }
+
+    } else {
+
+        sequence_get_trig_now(seq, step, trig);
+
+    }
+
+    
+}
+
+void sq_sequence_clear_trig(sq_sequence_t seq, int step) {
 
     if (seq->is_playing) {
 
         sequence_ctrl_msg_t msg;
         msg.param = SEQUENCE_SET_TRIG;
-        msg.vi = step_index;
+        msg.vi = step;
+
+        bool done = false;
+        msg.donep = &done;
 
         sequence_ringbuffer_write(seq, &msg);
 
+        while (!done) {
+            usleep(1000);
+        }
+
     } else {
 
-        sequence_clear_trig_now(seq, step_index);
+        sequence_clear_trig_now(seq, step);
 
     }
 
@@ -177,7 +221,14 @@ void sq_sequence_set_transpose(sq_sequence_t seq, int transpose) {
         msg.param = SEQUENCE_TRANSPOSE;
         msg.vi = transpose;
 
+        bool done = false;
+        msg.donep = &done;
+
         sequence_ringbuffer_write(seq, &msg);
+
+        while (!done) {
+            usleep(1000);
+        }
 
     } else {
 
@@ -195,7 +246,14 @@ void sq_sequence_set_playhead(sq_sequence_t seq, int ph) {
         msg.param = SEQUENCE_PH;
         msg.vi = ph;
 
+        bool done = false;
+        msg.donep = &done;
+
         sequence_ringbuffer_write(seq, &msg);
+
+        while (!done) {
+            usleep(1000);
+        }
 
     } else {
 
@@ -213,7 +271,14 @@ void sq_sequence_set_motion(sq_sequence_t seq, enum motion_type motion) {
         msg.param = SEQUENCE_MOTION;
         msg.vi = motion;
 
+        bool done = false;
+        msg.donep = &done;
+
         sequence_ringbuffer_write(seq, &msg);
+
+        while (!done) {
+            usleep(1000);
+        }
 
     } else {
 
@@ -237,7 +302,14 @@ void sq_sequence_set_first(sq_sequence_t seq, int first) {
         msg.param = SEQUENCE_FIRST;
         msg.vi = first;
 
+        bool done = false;
+        msg.donep = &done;
+
         sequence_ringbuffer_write(seq, &msg);
+
+        while (!done) {
+            usleep(1000);
+        }
 
     } else {
 
@@ -255,7 +327,14 @@ void sq_sequence_set_last(sq_sequence_t seq, int last) {
         msg.param = SEQUENCE_LAST;
         msg.vi = last;
 
+        bool done = false;
+        msg.donep = &done;
+
         sequence_ringbuffer_write(seq, &msg);
+
+        while (!done) {
+            usleep(1000);
+        }
 
     } else {
 
@@ -273,7 +352,14 @@ void sq_sequence_set_clockdivide(sq_sequence_t seq, int div) {
         msg.param = SEQUENCE_DIV;
         msg.vi = div;
 
+        bool done = false;
+        msg.donep = &done;
+
         sequence_ringbuffer_write(seq, &msg);
+
+        while (!done) {
+            usleep(1000);
+        }
 
     } else {
 
@@ -291,7 +377,14 @@ void sq_sequence_set_mute(sq_sequence_t seq, bool mute) {
         msg.param = SEQUENCE_MUTE;
         msg.vb = mute;
 
+        bool done = false;
+        msg.donep = &done;
+
         sequence_ringbuffer_write(seq, &msg);
+
+        while (!done) {
+            usleep(1000);
+        }
 
     } else {
 
@@ -463,12 +556,6 @@ sq_outport_t sq_sequence_get_outport(sq_sequence_t seq) {
 int sq_sequence_get_nsteps(sq_sequence_t seq) {
 
     return seq->nsteps;
-
-}
-
-sq_trigger_t sq_sequence_get_trig(sq_sequence_t seq, size_t index) {
-
-    return seq->trigs + index;
 
 }
 
@@ -737,12 +824,27 @@ sq_sequence_t sequence_malloc_from_json(json_object *jo_seq) {
 
 void sequence_set_trig_now(sq_sequence_t seq, int step_index, sq_trigger_t trig) {
 
+    // this is a "copy-in" operation
+
     if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
         fprintf(stderr, "step index %d out of range\n", step_index);
         return;
     }
 
     memcpy(seq->trigs + step_index, trig, sizeof(struct trigger_data));
+
+}
+
+void sequence_get_trig_now(sq_sequence_t seq, int step_index, sq_trigger_t trig) {
+
+    // this is a "copy-out" operation
+
+    if ( (step_index < 0) || (step_index >= seq->nsteps) ) {
+        fprintf(stderr, "step index %d out of range\n", step_index);
+        return;
+    }
+
+    memcpy(trig, seq->trigs + step_index, sizeof(struct trigger_data));
 
 }
 
@@ -897,7 +999,11 @@ static void sequence_serve_ctrl_msgs(sq_sequence_t seq) {
             sequence_set_mute_now(seq, msg.vb);
         } else if (msg.param == SEQUENCE_MOTION) {
             sequence_set_motion_now(seq, msg.vi);
+        } else if (msg.param == SEQUENCE_GET_TRIG) {
+            sequence_get_trig_now(seq, msg.vi, msg.vp);
         }
+
+        *msg.donep = true;
 
         avail -= sizeof(sequence_ctrl_msg_t);
 

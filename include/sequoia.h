@@ -81,8 +81,8 @@ void            sq_sequence_pprint(sq_sequence_t);
 ////
 sq_outport_t    sq_sequence_get_outport(sq_sequence_t);
 void            sq_sequence_set_outport(sq_sequence_t, sq_outport_t);
-sq_trigger_t    sq_sequence_get_trig(sq_sequence_t, size_t);
 void            sq_sequence_set_trig(sq_sequence_t, int, sq_trigger_t);
+void            sq_sequence_get_trig(sq_sequence_t, size_t, sq_trigger_t);
 void            sq_sequence_clear_trig(sq_sequence_t, int);
 ////
 const char*     sq_sequence_get_name(sq_sequence_t);

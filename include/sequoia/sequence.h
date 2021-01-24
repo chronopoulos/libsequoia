@@ -93,6 +93,7 @@ sq_sequence_t sequence_malloc_from_json(json_object*);
 
 void sequence_reset_now(sq_sequence_t);
 void sequence_set_trig_now(sq_sequence_t, int, sq_trigger_t);
+void sequence_get_trig_now(sq_sequence_t, int, sq_trigger_t);
 void sequence_clear_trig_now(sq_sequence_t, int);
 void sequence_set_transpose_now(sq_sequence_t, int);
 void sequence_set_playhead_now(sq_sequence_t, int);
