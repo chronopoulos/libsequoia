@@ -80,6 +80,9 @@ struct sequence_data {
     bool noti_enable;
     enum motion_type motion;
     bool bounce_forward;
+    float swing;
+    enum swing_type swingType;
+    bool swingFlag;
 
 };
 
@@ -102,5 +105,7 @@ void sequence_set_last_now(sq_sequence_t, int);
 void sequence_set_clockdivide_now(sq_sequence_t, int);
 void sequence_set_mute_now(sq_sequence_t, bool);
 void sequence_set_motion_now(sq_sequence_t, enum motion_type);
+void sequence_set_swing_now(sq_sequence_t, float swing);
+void sequence_set_swingType_now(sq_sequence_t, enum swing_type);
 
 #endif

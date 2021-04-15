@@ -35,7 +35,7 @@
 
 enum sequence_param {SEQUENCE_SET_TRIG, SEQUENCE_CLEAR_TRIG, SEQUENCE_TRANSPOSE, SEQUENCE_PH,
                         SEQUENCE_DIV, SEQUENCE_MUTE, SEQUENCE_FIRST, SEQUENCE_LAST, SEQUENCE_MOTION,
-                        SEQUENCE_GET_TRIG};
+                        SEQUENCE_GET_TRIG, SEQUENCE_SWING, SEQUENCE_SWING_TYPE};
 
 typedef struct {
 
@@ -99,6 +99,9 @@ sq_sequence_t sq_sequence_new(int nsteps) {
 
     seq->motion = MOTION_FORWARD;
     seq->bounce_forward = true;
+
+    seq->swing = 0.0;
+    seq->swingType = SWING_ALTERNATE;
 
     notification_data_init(&seq->noti);
     seq->noti_enable = false;
@@ -394,6 +397,56 @@ void sq_sequence_set_mute(sq_sequence_t seq, bool mute) {
 
 }
 
+void sq_sequence_set_swing(sq_sequence_t seq, float swing) {
+
+    if (seq->is_playing) {
+
+        sequence_ctrl_msg_t msg;
+        msg.param = SEQUENCE_SWING;
+        msg.vf = swing;
+
+        bool done = false;
+        msg.donep = &done;
+
+        sequence_ringbuffer_write(seq, &msg);
+
+        while (!done) {
+            usleep(1000);
+        }
+
+    } else {
+
+        sequence_set_swing_now(seq, swing);
+
+    }
+
+}
+
+void sq_sequence_set_swingType(sq_sequence_t seq, enum swing_type swingType) {
+
+    if (seq->is_playing) {
+
+        sequence_ctrl_msg_t msg;
+        msg.param = SEQUENCE_SWING_TYPE;
+        msg.vi = swingType;
+
+        bool done = false;
+        msg.donep = &done;
+
+        sequence_ringbuffer_write(seq, &msg);
+
+        while (!done) {
+            usleep(1000);
+        }
+
+    } else {
+
+        sequence_set_swingType_now(seq, swingType);
+
+    }
+
+}
+
 void sq_sequence_pprint(sq_sequence_t seq) {
 
     if (seq->is_playing) {
@@ -596,6 +649,8 @@ void sequence_reset_now(sq_sequence_t seq) {
     seq->idiv = 0;
     seq->step = seq->first;
 
+    seq->swingFlag = false;
+
     if (seq->noti_enable) {
         seq->noti.playhead = seq->first;
         seq->noti.playhead_new = true;
@@ -618,12 +673,29 @@ midiEvent sequence_process(sq_sequence_t seq, jack_nframes_t fps,
     // serve any control messages in the ringbuffer
     sequence_serve_ctrl_msgs(seq);
 
+    float frac;
+
     // output JACK MIDI
     if (!seq->mute && seq->outport && !seq->idiv) {
         trig = seq->trigs + seq->step;
         if (trig->type != TRIG_NULL) {
             if (trig->probability >= ((float) random()) / RAND_MAX) {
-                frame_trig = fps * (0.5 + trig->microtime);  // round down
+
+                frac = 0.5 + trig->microtime;
+                if (seq->swingType == SWING_ODD) {
+                    // determines swing by step number
+                    if (seq->step % 2) {
+                        // odd-numbered steps get swing (zero-indexed)
+                        frac += (0.5 - trig->microtime)*seq->swing;
+                    }
+                } else if (seq->swingType == SWING_ALTERNATE) {
+                    // determines swing by step-wise alternating flag
+                    if (seq->swingFlag) {
+                        frac += (0.5 - trig->microtime)*seq->swing;
+                    }
+                }
+                frame_trig = fps * frac;  // integer assignment rounds down
+
                 if ((frame_trig >= start) && (frame_trig < start + len)) {
 
                     mev.buf = seq->outport->buf;
@@ -709,6 +781,9 @@ void sequence_step(sq_sequence_t seq) {
 
         // and reset the counter
         seq->idiv = 0;
+
+        // and toggle the swing flag
+        seq->swingFlag = ! seq->swingFlag;
 
     }
 
@@ -959,6 +1034,20 @@ void sequence_set_motion_now(sq_sequence_t seq, enum motion_type motion) {
 
 }
 
+void sequence_set_swing_now(sq_sequence_t seq, float swing) {
+
+    if ((swing >= 0.0) && (swing <= 0.99)) {
+        seq->swing = swing;
+    }
+
+}
+
+void sequence_set_swingType_now(sq_sequence_t seq, enum swing_type swingType) {
+
+    seq->swingType = swingType;
+
+}
+
 // STATIC CODE
 
 static void sequence_ringbuffer_write(sq_sequence_t seq, sequence_ctrl_msg_t *msg) {
@@ -1001,6 +1090,8 @@ static void sequence_serve_ctrl_msgs(sq_sequence_t seq) {
             sequence_set_motion_now(seq, msg.vi);
         } else if (msg.param == SEQUENCE_GET_TRIG) {
             sequence_get_trig_now(seq, msg.vi, msg.vp);
+        } else if (msg.param == SEQUENCE_SWING) {
+            sequence_set_swing_now(seq, msg.vf);
         }
 
         *msg.donep = true;

@@ -45,6 +45,8 @@ typedef struct outport_data * sq_outport_t;
 
 enum motion_type {MOTION_FORWARD, MOTION_BACKWARD, MOTION_BOUNCE};
 
+enum swing_type {SWING_ODD, SWING_ALTERNATE};
+
 enum inport_type {INPORT_NONE, INPORT_TRANSPOSE, INPORT_PLAYHEAD, INPORT_CLOCKDIVIDE,
                     INPORT_DIRECTION, INPORT_MUTE, INPORT_FIRST, INPORT_LAST};
 
@@ -102,6 +104,8 @@ void            sq_sequence_set_mute(sq_sequence_t, bool);
 int             sq_sequence_get_nsteps(sq_sequence_t);
 void            sq_sequence_set_motion(sq_sequence_t, enum motion_type);
 enum motion_type sq_sequence_get_motion(sq_sequence_t);
+void            sq_sequence_set_swing(sq_sequence_t, float);
+void            sq_sequence_set_swing_type(sq_sequence_t, enum swing_type);
 ////
 void            sq_sequence_set_notifications(sq_sequence_t, bool);
 bool            sq_sequence_read_new_playhead(sq_sequence_t, int*);
