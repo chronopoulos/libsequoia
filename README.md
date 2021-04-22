@@ -1,5 +1,11 @@
 # libsequoia
-an API for generative musical sequencing
+
+[![Build Status](https://travis-ci.com/chronopoulos/libsequoia.svg?branch=master)](https://travis-ci.com/chronopoulos/libsequoia)
+
+**libsequoia** is a library for loop-based musical step sequencing. It is available
+here as a C API, and uses JACK for the MIDI backend.
+[Python bindings](https://github.com/chronopoulos/python-sequoia) are also
+available as a separate project.
 
 ## Build Instructions (C library)
 
