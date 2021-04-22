@@ -1,6 +1,7 @@
 # libsequoia
 
 [![Build Status](https://travis-ci.com/chronopoulos/libsequoia.svg?branch=master)](https://travis-ci.com/chronopoulos/libsequoia)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 **libsequoia** is a library for loop-based musical step sequencing. It is available
 here as a C API, and uses JACK for the MIDI backend.
