@@ -1,3 +1,10 @@
 language: c
 compiler: gcc
+
+before_install:
+    - sudo apt-get update
+
+install:
+    - sudo apt-get install -y libjack-jackd2-dev libjson-c-dev
+
 script: make
