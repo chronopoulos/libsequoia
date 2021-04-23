@@ -9,5 +9,8 @@ install:
 
 script:
     - make
-    - cd test && make
-    - cd test && bash runTests.sh
+    - sudo make install
+    - cd test
+    - make
+    - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+    - bash runTests.sh
