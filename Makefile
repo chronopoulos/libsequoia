@@ -5,6 +5,7 @@ CFLAGS += -Wall -O2 -g
 
 SRC_DIR = src
 INC_DIR = include
+TEST_DIR = test
 
 SOURCES := $(wildcard $(SRC_DIR)/*.c)
 
@@ -19,13 +20,17 @@ INSTALL_DIR_INC = /usr/local/include
 
 ##########################
 
-.PHONY: all library clean install uninstall
+.PHONY: all library clean install uninstall test
 
 ##########################
 
 default: library
 
 library: $(SO)
+
+test:
+	cd $(TEST_DIR) && make
+	pwd
 
 ##########################
 
@@ -49,3 +54,5 @@ uninstall:
 
 clean:
 	rm -rf $(LIB_DIR)
+	cd $(TEST_DIR) && make clean
+

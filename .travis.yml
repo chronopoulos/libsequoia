@@ -7,4 +7,7 @@ before_install:
 install:
     - sudo apt-get install -y libjack-jackd2-dev libjson-c-dev
 
-script: make
+script:
+    - make
+    - cd test && make
+    - cd test && bash runTests.sh
