@@ -14,5 +14,5 @@ script:
     - cd test
     - make
     - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
-    - jackd -R -d alsa -r 44100 -p 1024
+    - jackd -d dummy &
     - bash runTests.sh
