@@ -59,6 +59,7 @@ enum trig_type {TRIG_NULL, TRIG_NOTE, TRIG_CC};
 sq_session_t    sq_session_new(const char*);
 void            sq_session_delete(sq_session_t);
 void            sq_session_delete_recursive(sq_session_t);
+void            sq_session_disconnect_jack(sq_session_t);
 int             sq_session_register_outport(sq_session_t, sq_outport_t);
 int             sq_session_register_inport(sq_session_t, sq_inport_t);
 void            sq_session_add_sequence(sq_session_t, sq_sequence_t);

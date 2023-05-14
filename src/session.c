@@ -56,7 +56,6 @@ static void session_ringbuffer_write(sq_session_t, session_ctrl_msg_t*);
 static void session_reset_frame_counter(sq_session_t );
 static void session_serve_ctrl_msgs(sq_session_t);
 static int session_process(jack_nframes_t, void*);
-static void session_disconnect_jack(sq_session_t);
 static void session_set_bpm_now(sq_session_t, float);
 static void session_add_sequence_now(sq_session_t, sq_sequence_t);
 static void session_rm_sequence_now(sq_session_t, sq_sequence_t);
@@ -133,6 +132,14 @@ void sq_session_delete(sq_session_t sesh) {
     offHeap_delete(sesh->offHeap);
     free(sesh->buf_off);
     free(sesh);
+
+}
+
+void sq_session_disconnect_jack(sq_session_t sesh) {
+
+    if (jack_client_close(sesh->jack_client)) {
+        fprintf(stderr, "sequoia failed to disconnect jack client\n");
+    }
 
 }
 
@@ -384,7 +391,7 @@ void sq_session_delete_recursive(sq_session_t sesh) {
     // recursively frees all the malloc'd memory attributed to the session
 
     sq_session_stop(sesh);
-    session_disconnect_jack(sesh);
+    sq_session_disconnect_jack(sesh);
 
     // sequences
     for (int i=0; i<sesh->nseqs; i++) {
@@ -595,14 +602,6 @@ static int session_process(jack_nframes_t nframes, void *arg) {
     }
 
     return 0;
-
-}
-
-static void session_disconnect_jack(sq_session_t sesh) {
-
-    if (jack_client_close(sesh->jack_client)) {
-        fprintf(stderr, "sequoia failed to disconnect jack client\n");
-    }
 
 }
 
